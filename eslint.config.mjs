@@ -1,9 +1,9 @@
 // @ts-check
-import eslint from '@eslint/js';
-import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
-import globals from 'globals';
-import tseslint from 'typescript-eslint';
-import { defineConfig } from 'eslint/config';
+import eslint from '@eslint/js'
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
+import globals from 'globals'
+import tseslint from 'typescript-eslint'
+import { defineConfig } from 'eslint/config'
 
 export default defineConfig(
   {
@@ -33,4 +33,4 @@ export default defineConfig(
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
     },
   },
-);
+)
