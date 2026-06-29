@@ -3,6 +3,7 @@ import { AppModule } from './app.module'
 import cookieParser from 'cookie-parser'
 import session from 'express-session'
 import { NestExpressApplication } from '@nestjs/platform-express'
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import { join } from 'path'
 import { engine } from 'express-handlebars'
 import { ValidationPipe } from '@nestjs/common'
@@ -41,6 +42,16 @@ async function bootstrap() {
       },
     }),
   )
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('CMS')
+    .setDescription('Cms API description')
+    .setVersion('1.0')
+    .addTag('cms')
+    .build()
+
+  const documentFactory = () => SwaggerModule.createDocument(app, swaggerConfig)
+  SwaggerModule.setup('docs', app, documentFactory)
 
   await app.listen(process.env.PORT ?? 3000)
 }
