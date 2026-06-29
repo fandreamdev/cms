@@ -8,6 +8,7 @@ import config, {
 } from './config'
 import { UserService } from './services/user.service'
 import { User } from './entities/user.entity'
+import { IsUserAlreadyExistConstraint } from './validators/is-username-unique.validator'
 
 @Global()
 @Module({
@@ -28,7 +29,7 @@ import { User } from './entities/user.entity'
     }),
     TypeOrmModule.forFeature([User]),
   ],
-  providers: [UserService],
+  providers: [UserService, IsUserAlreadyExistConstraint],
   exports: [UserService],
 })
 export class SharedModule {}

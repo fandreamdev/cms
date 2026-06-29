@@ -1,6 +1,6 @@
 import { Controller, Get, Render } from '@nestjs/common'
 
-@Controller('dashboard')
+@Controller('admin/dashboard')
 export class DashboardController {
   @Get()
   @Render('dashboard')

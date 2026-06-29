@@ -6,8 +6,11 @@ import { NestExpressApplication } from '@nestjs/platform-express'
 import { join } from 'path'
 import { engine } from 'express-handlebars'
 import { ValidationPipe } from '@nestjs/common'
+import { useContainer } from 'class-validator'
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
+
+  useContainer(app.select(AppModule), { fallbackOnErrors: true })
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }))
   // 配置静态文件根目录
@@ -41,4 +44,6 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000)
 }
-bootstrap()
+bootstrap().catch((err) => {
+  console.log(err)
+})

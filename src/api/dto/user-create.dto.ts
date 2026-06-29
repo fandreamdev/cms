@@ -1,3 +1,5 @@
+import { applyDecorators } from '@nestjs/common'
+import { Type } from 'class-transformer'
 import {
   IsBoolean,
   IsEmail,
@@ -6,13 +8,17 @@ import {
   IsPhoneNumber,
   IsString,
   Min,
+  MinLength,
 } from 'class-validator'
+import { IsUserAlreadyExist } from '../../shared/validators/is-username-unique.validator'
 
 export class UserCreateDto {
   @IsString()
+  @IsUserAlreadyExist({ groups: ['new'] })
   username!: string
 
   @IsString()
+  @MinLength(4)
   password!: string
 
   @IsPhoneNumber('CN')
@@ -23,14 +29,29 @@ export class UserCreateDto {
   @IsString()
   email!: string
 
-  @IsNumber()
-  @IsIn([0, 1])
+  @StatusValidators()
   status!: number
 
   @IsBoolean()
+  @Type(() => Boolean)
   isSuper!: boolean
 
-  @IsNumber()
-  @Min(0)
+  @SortValidators()
   sort!: number
+}
+
+function StatusValidators() {
+  return applyDecorators(
+    IsNumber(),
+    IsIn([0, 1]),
+    Type(() => Number),
+  )
+}
+
+function SortValidators() {
+  return applyDecorators(
+    IsNumber(),
+    Min(0),
+    Type(() => Number),
+  )
 }
