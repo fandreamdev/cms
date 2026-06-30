@@ -1,6 +1,7 @@
 {
   "list_title": "User List",
   "form_title_create": "Create User",
+  "form_title_update": "Edit User",
   "add_user": "Add User",
   "field": {
     "username": "Username",

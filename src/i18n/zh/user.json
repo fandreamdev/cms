@@ -1,6 +1,7 @@
 {
   "list_title": "用户列表",
   "form_title_create": "创建用户",
+  "form_title_update": "编辑用户",
   "add_user": "添加用户",
   "field": {
     "username": "用户名",

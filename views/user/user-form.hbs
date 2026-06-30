@@ -1,6 +1,8 @@
-<h1>{{t 'user.form_title_create'}}</h1>
-
-<form method='post' action='/admin/users'>
+<h1>{{#if user.id}}{{t 'user.form_title_update'}}{{else}}{{t 'user.form_title_create'}}{{/if}}</h1>
+<form
+  method='post'
+  action='{{#if user.id}}/admin/users/{{user.id}}?_method=PUT{{else}}/admin/users{{/if}}'
+>
   <div class='mb-3'>
     <label for='username' class='form-label'>{{t 'user.field.username'}}</label>
     <input
@@ -8,7 +10,7 @@
       name='username'
       class='form-control'
       id='username'
-      value=''
+      value='{{user.username}}'
     />
   </div>
   <div class='mb-3'>
@@ -18,24 +20,40 @@
       name='password'
       class='form-control'
       id='password'
-      value=''
     />
   </div>
   <div class='mb-3'>
     <label for='email' class='form-label'>{{t 'user.field.email'}}</label>
-    <input type='email' name='email' class='form-control' id='email' />
+    <input
+      type='email'
+      name='email'
+      class='form-control'
+      id='email'
+      value='{{user.email}}'
+    />
   </div>
   <div class='mb-3'>
     <label for='status' class='form-label'>{{t 'user.field.status'}}</label>
-    <select class='form-select' id='status' name='status' aria-label='status'>
-      <option selected>{{t 'user.status.placeholder'}}</option>
-      <option value='0'>{{t 'user.status.inactive'}}</option>
-      <option value='1'>{{t 'user.status.active'}}</option>
+    <select
+      class='form-select'
+      id='status'
+      name='status'
+      aria-label='status'
+    >
+      <option value=''>{{t 'user.status.placeholder'}}</option>
+      <option value='0' {{#if (eq user.status 0)}}selected{{/if}}>{{t 'user.status.inactive'}}</option>
+      <option value='1' {{#if (eq user.status 1)}}selected{{/if}}>{{t 'user.status.active'}}</option>
     </select>
   </div>
   <div class='mb-3'>
     <label for='sort' class='form-label'>{{t 'user.field.sort'}}</label>
-    <input type='number' class='form-control' id='sort' value='100' />
+    <input
+      type='number'
+      name='sort'
+      class='form-control'
+      id='sort'
+      value='{{user.sort}}'
+    />
   </div>
   <button type='submit' class='btn btn-primary'>{{t 'common.save'}}</button>
 </form>

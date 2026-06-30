@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
 import cookieParser from 'cookie-parser'
 import session from 'express-session'
+import methodOverride from 'method-override'
 import { NestExpressApplication } from '@nestjs/platform-express'
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import { join } from 'path'
@@ -28,6 +29,8 @@ async function bootstrap() {
   )
 
   app.use(cookieParser())
+  // 允许表单通过 _method 字段模拟 PUT/DELETE 请求
+  app.use(methodOverride('_method'))
   app.use(
     session({
       secret: 'secret-key',
@@ -53,6 +56,7 @@ async function bootstrap() {
       extname: '.hbs',
       helpers: {
         t: i18nService.hbsHelper,
+        eq: (a: unknown, b: unknown) => a === b,
       },
       runtimeOptions: {
         allowProtoMethodsByDefault: true,
