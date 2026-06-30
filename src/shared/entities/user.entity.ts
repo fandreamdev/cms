@@ -17,10 +17,10 @@ export class User {
   @Column({ comment: '密码' })
   password!: string
 
-  @Column({ length: 15, unique: true, comment: '手机号码' })
+  @Column({ length: 15, unique: true, comment: '手机号码', nullable: true })
   mobile!: string
 
-  @Column({ length: 100, unique: true, comment: '邮箱地址' })
+  @Column({ length: 100, unique: true, comment: '邮箱地址', nullable: true })
   email!: string
 
   @Column({ type: 'int', default: 1, comment: '是否生效 0表示无效，1表示有效' })

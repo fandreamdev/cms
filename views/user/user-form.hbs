@@ -1,0 +1,41 @@
+<h1>创建用户</h1>
+
+<form method='post' action='/admin/users'>
+  <div class='mb-3'>
+    <label for='username' class='form-label'>用户名</label>
+    <input
+      type='text'
+      name='username'
+      class='form-control'
+      id='username'
+      value=''
+    />
+  </div>
+  <div class='mb-3'>
+    <label for='password' class='form-label'>密码</label>
+    <input
+      type='password'
+      name='password'
+      class='form-control'
+      id='password'
+      value=''
+    />
+  </div>
+  <div class='mb-3'>
+    <label for='email' class='form-label'>邮箱</label>
+    <input type='email' name='email' class='form-control' id='email' />
+  </div>
+  <div class='mb-3'>
+    <label for='status' class='form-label'>是否生效</label>
+    <select class='form-select' id='status' name='status' aria-label='status'>
+      <option selected>请选择该用户是否生效</option>
+      <option value='0'>未激活</option>
+      <option value='1'>激活</option>
+    </select>
+  </div>
+  <div class='mb-3'>
+    <label for='sort' class='form-label'>排序</label>
+    <input type='number' class='form-control' id='sort' value='100' />
+  </div>
+  <button type='submit' class='btn btn-primary'>保存</button>
+</form>
