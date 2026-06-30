@@ -6,10 +6,13 @@ import { NestExpressApplication } from '@nestjs/platform-express'
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import { join } from 'path'
 import { engine } from 'express-handlebars'
-import { ValidationPipe } from '@nestjs/common'
 import { useContainer } from 'class-validator'
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston'
-import { I18nService } from 'nestjs-i18n'
+import {
+  I18nService,
+  I18nValidationExceptionFilter,
+  I18nValidationPipe,
+} from 'nestjs-i18n'
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
@@ -19,7 +22,10 @@ async function bootstrap() {
 
   useContainer(app.select(AppModule), { fallbackOnErrors: true })
 
-  app.useGlobalPipes(new ValidationPipe({ transform: true }))
+  app.useGlobalPipes(new I18nValidationPipe({ transform: true }))
+  app.useGlobalFilters(
+    new I18nValidationExceptionFilter({ detailedErrors: true }),
+  )
 
   app.use(cookieParser())
   app.use(

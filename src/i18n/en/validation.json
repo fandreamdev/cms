@@ -1,0 +1,12 @@
+{
+  "isNotEmpty": "The {field} should not be empty.",
+  "isString": "The {field} must be a string.",
+  "minLength": "The {field} must be at least {length} characters.",
+  "isEmail": "The {field} must be a valid email address.",
+  "isPhoneNumber": "The {field} must be a valid phone number.",
+  "isNumber": "The {field} must be a number.",
+  "isIn": "The {field} has an invalid value.",
+  "min": "The {field} must not be less than {min}.",
+  "isBoolean": "The {field} must be a boolean value.",
+  "isUserAlreadyExist": "The {field} \"{value}\" already exists."
+}

@@ -23,11 +23,13 @@ export class IsUserAlreadyExistConstraint implements ValidatorConstraintInterfac
   }
 }
 
-export function IsUserAlreadyExist(validationOptions?: ValidationOptions) {
-  return function (object: object, propertyName: string) {
+export function IsUserAlreadyExist(
+  validationOptions?: ValidationOptions,
+): PropertyDecorator {
+  return function (object: object, propertyName: string | symbol) {
     registerDecorator({
       target: object.constructor,
-      propertyName: propertyName,
+      propertyName: propertyName as string,
       options: validationOptions,
       constraints: [],
       validator: IsUserAlreadyExistConstraint,

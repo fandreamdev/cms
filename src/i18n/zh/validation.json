@@ -1,0 +1,12 @@
+{
+  "isNotEmpty": "{field}不能为空。",
+  "isString": "{field}必须是字符串。",
+  "minLength": "{field}至少需要{length}个字符。",
+  "isEmail": "{field}必须是有效的邮箱地址。",
+  "isPhoneNumber": "{field}必须是有效的手机号码。",
+  "isNumber": "{field}必须是数字。",
+  "isIn": "{field}的取值不合法。",
+  "min": "{field}不能小于{min}。",
+  "isBoolean": "{field}必须是布尔值。",
+  "isUserAlreadyExist": "{field}「{value}」已存在。"
+}

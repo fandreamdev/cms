@@ -7,10 +7,10 @@ import {
   ParseIntPipe,
   Post,
   Put,
-  ValidationPipe,
 } from '@nestjs/common'
 import { UserService } from '../../shared/services/user.service'
 import { UserCreateDto, UserUpdateDto } from '../dto'
+import { I18nValidationPipe } from 'nestjs-i18n'
 
 @Controller('api/users')
 export class UserController {
@@ -28,7 +28,7 @@ export class UserController {
 
   @Post()
   async create(
-    @Body(new ValidationPipe({ transform: true, groups: ['new'] }))
+    @Body(new I18nValidationPipe({ transform: true, groups: ['new'] }))
     createDto: UserCreateDto,
   ) {
     return this.userService.create(createDto)
