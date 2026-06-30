@@ -1,0 +1,17 @@
+{
+  "list_title": "User List",
+  "form_title_create": "Create User",
+  "add_user": "Add User",
+  "field": {
+    "username": "Username",
+    "password": "Password",
+    "email": "Email",
+    "status": "Status",
+    "sort": "Sort"
+  },
+  "status": {
+    "placeholder": "Please select whether the user is active",
+    "inactive": "Inactive",
+    "active": "Active"
+  }
+}

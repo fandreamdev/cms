@@ -1,0 +1,8 @@
+{
+  "system_name": "CMS 后台管理系统",
+  "brand": "CMS",
+  "welcome": "欢迎，{username}",
+  "logout": "退出登录",
+  "save": "保存",
+  "please_select": "请选择"
+}

@@ -1,4 +1,9 @@
-export function env<T>(key: string, transfer?: (source: string) => T) {
+export function env(key: string): string | undefined
+export function env<T>(
+  key: string,
+  transfer: (source: string) => T,
+): T | undefined
+export function env<T = string>(key: string, transfer?: (source: string) => T) {
   const source = process.env[key]
   if (source === undefined || source === null) {
     return source
@@ -9,6 +14,11 @@ export function env<T>(key: string, transfer?: (source: string) => T) {
   return source
 }
 
+export function envString(key: string, defaultValue: string): string
+export function envString(
+  key: string,
+  defaultValue?: string,
+): string | undefined
 export function envString(key: string, defaultValue?: string) {
   return env(key) ?? defaultValue
 }

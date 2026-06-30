@@ -9,6 +9,7 @@ import { engine } from 'express-handlebars'
 import { ValidationPipe } from '@nestjs/common'
 import { useContainer } from 'class-validator'
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston'
+import { I18nService } from 'nestjs-i18n'
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
@@ -19,22 +20,6 @@ async function bootstrap() {
   useContainer(app.select(AppModule), { fallbackOnErrors: true })
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }))
-  // 配置静态文件根目录
-  app.useStaticAssets(join(__dirname, '..', 'public'))
-
-  // 配置模版文件的根目录
-  app.setBaseViewsDir(join(__dirname, '..', 'views'))
-  app.engine(
-    'hbs',
-    engine({
-      extname: '.hbs',
-      runtimeOptions: {
-        allowProtoMethodsByDefault: true,
-        allowProtoPropertiesByDefault: true,
-      },
-    }),
-  )
-  app.set('view engine', 'hbs')
 
   app.use(cookieParser())
   app.use(
@@ -47,6 +32,29 @@ async function bootstrap() {
       },
     }),
   )
+
+  // 配置静态文件根目录
+  app.useStaticAssets(join(__dirname, '..', 'public'))
+
+  // 配置模版文件的根目录
+  app.setBaseViewsDir(join(__dirname, '..', 'views'))
+  // 把 nestjs-i18n 的 t helper 注册到 express-handlebars 引擎上
+  // （nestjs-i18n 自带的 hbs 集成只作用于 hbs 包，这里手动接到实际使用的引擎）
+  const i18nService = app.get<I18nService>(I18nService)
+  app.engine(
+    'hbs',
+    engine({
+      extname: '.hbs',
+      helpers: {
+        t: i18nService.hbsHelper,
+      },
+      runtimeOptions: {
+        allowProtoMethodsByDefault: true,
+        allowProtoPropertiesByDefault: true,
+      },
+    }),
+  )
+  app.setViewEngine('hbs')
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('CMS')

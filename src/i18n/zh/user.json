@@ -1,0 +1,17 @@
+{
+  "list_title": "用户列表",
+  "form_title_create": "创建用户",
+  "add_user": "添加用户",
+  "field": {
+    "username": "用户名",
+    "password": "密码",
+    "email": "邮箱",
+    "status": "是否生效",
+    "sort": "排序"
+  },
+  "status": {
+    "placeholder": "请选择该用户是否生效",
+    "inactive": "未激活",
+    "active": "激活"
+  }
+}

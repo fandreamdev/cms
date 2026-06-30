@@ -1,0 +1,8 @@
+{
+  "system_name": "CMS Admin System",
+  "brand": "CMS",
+  "welcome": "Welcome, {username}",
+  "logout": "Logout",
+  "save": "Save",
+  "please_select": "Please select"
+}
