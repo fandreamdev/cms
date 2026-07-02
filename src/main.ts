@@ -14,6 +14,7 @@ import {
   I18nValidationExceptionFilter,
   I18nValidationPipe,
 } from 'nestjs-i18n'
+import { Request } from 'express'
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
@@ -29,8 +30,17 @@ async function bootstrap() {
   )
 
   app.use(cookieParser())
-  // 允许表单通过 _method 字段模拟 PUT/DELETE 请求
-  app.use(methodOverride('_method'))
+  // 允许表单通过 _method 查询参数模拟 PUT/DELETE 请求
+  app.use(
+    methodOverride((req) => {
+      const method = (req.query as Record<string, unknown>)?._method
+      if (typeof method === 'string') {
+        delete (req.query as Record<string, unknown>)._method
+        return method
+      }
+      return req.method
+    }),
+  )
   app.use(
     session({
       secret: 'secret-key',

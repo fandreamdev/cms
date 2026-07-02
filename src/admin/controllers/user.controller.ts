@@ -13,6 +13,7 @@ import {
 import { UserService } from '../../shared/services/user.service'
 import { UserCreateDto, UserUpdateDto } from '../../api/dto'
 import { AdminExceptionFilter } from '../filters/admin-exception.filter'
+import { hashPassword } from '../../shared/utils/pwd'
 
 @Controller('admin/users')
 @UseFilters(AdminExceptionFilter)
@@ -35,6 +36,9 @@ export class UserController {
   @Post()
   @Redirect('/admin/users')
   async create(@Body() createDto: UserCreateDto) {
+    if (createDto.password) {
+      createDto.password = await hashPassword(createDto.password)
+    }
     return this.userService.create(createDto)
   }
 
