@@ -244,6 +244,15 @@
       })
         .done(function () {
           $row.remove()
+          // 若当前页已删空且不是第一页，则回退一页；否则重新加载当前页，
+          // 让后端重新计算分页（总数、页码），避免停留在空页。
+          var remaining = $('table tbody tr').length
+          var params = new URLSearchParams(window.location.search)
+          var page = parseInt(params.get('page') || '1', 10)
+          if (remaining === 0 && page > 1) {
+            params.set('page', page - 1)
+          }
+          window.location.search = params.toString()
         })
         .fail(function () {
           alert('删除失败')
