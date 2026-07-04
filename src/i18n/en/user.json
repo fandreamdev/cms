@@ -2,17 +2,25 @@
   "list_title": "User List",
   "form_title_create": "Create User",
   "form_title_update": "Edit User",
+  "detail_title": "User Detail",
   "add_user": "Add User",
   "search": "Search",
   "export": "Export",
+  "view": "View",
+  "edit": "Edit",
+  "delete": "Delete",
+  "back": "Back",
   "field": {
+    "id": "ID",
     "username": "Username",
     "password": "Password",
     "mobile": "Mobile",
     "email": "Email",
     "status": "Status",
     "is_super": "Super Admin",
-    "sort": "Sort"
+    "sort": "Sort",
+    "created_at": "Created At",
+    "updated_at": "Updated At"
   },
   "status": {
     "placeholder": "Please select whether the user is active",

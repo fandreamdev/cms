@@ -114,10 +114,16 @@
         <td>{{this.sort}}</td>
         <td>
           <a
+            href='/admin/users/{{this.id}}/detail'
+            class='btn btn-info'
+          >{{t 'user.view'}}</a>
+          <a
             href='/admin/users/{{this.id}}/edit'
             class='btn btn-success'
-          >编辑</a>
-          <button type='button' class='btn btn-danger js-delete'>删除</button>
+          >{{t 'user.edit'}}</a>
+          <button type='button' class='btn btn-danger js-delete'>{{t
+              'user.delete'
+            }}</button>
         </td>
       </tr>
     {{/each}}

@@ -8,6 +8,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import { join } from 'path'
 import { engine } from 'express-handlebars'
 import { useContainer } from 'class-validator'
+import { formatDate } from './shared/utils/hbs-helpers'
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston'
 import {
   I18nService,
@@ -68,6 +69,7 @@ async function bootstrap() {
       helpers: {
         t: i18nService.hbsHelper,
         eq: (a: unknown, b: unknown) => a === b,
+        formatDate,
       },
       runtimeOptions: {
         allowProtoMethodsByDefault: true,

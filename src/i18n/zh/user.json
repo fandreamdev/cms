@@ -2,17 +2,25 @@
   "list_title": "用户列表",
   "form_title_create": "创建用户",
   "form_title_update": "编辑用户",
+  "detail_title": "用户详情",
   "add_user": "添加用户",
   "search": "查询",
   "export": "导出",
+  "view": "查看",
+  "edit": "编辑",
+  "delete": "删除",
+  "back": "返回",
   "field": {
+    "id": "ID",
     "username": "用户名",
     "password": "密码",
     "mobile": "手机号",
     "email": "邮箱",
     "status": "是否生效",
     "is_super": "超级管理员",
-    "sort": "排序"
+    "sort": "排序",
+    "created_at": "创建时间",
+    "updated_at": "更新时间"
   },
   "status": {
     "placeholder": "请选择该用户是否生效",

@@ -53,6 +53,16 @@ export class UserController {
     return this.userService.create(createDto)
   }
 
+  @Get(':id/detail')
+  @Render('user/user-detail')
+  async detail(@Param('id', ParseIntPipe) id: number) {
+    const user = await this.userService.findOne({ where: { id } })
+    if (!user) {
+      throw new HttpException('User not Found', 404)
+    }
+    return { user }
+  }
+
   @Get(':id/edit')
   @Render('user/user-form')
   async updateForm(@Param('id', ParseIntPipe) id: number) {

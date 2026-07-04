@@ -1,0 +1,59 @@
+<h1>{{t 'user.detail_title'}}</h1>
+
+<table class='table table-bordered align-middle w-auto'>
+  <tbody>
+    <tr>
+      <th class='table-light text-nowrap'>{{t 'user.field.id'}}</th>
+      <td>{{user.id}}</td>
+    </tr>
+    <tr>
+      <th class='table-light text-nowrap'>{{t 'user.field.username'}}</th>
+      <td>{{user.username}}</td>
+    </tr>
+    <tr>
+      <th class='table-light text-nowrap'>{{t 'user.field.mobile'}}</th>
+      <td>{{user.mobile}}</td>
+    </tr>
+    <tr>
+      <th class='table-light text-nowrap'>{{t 'user.field.email'}}</th>
+      <td>{{user.email}}</td>
+    </tr>
+    <tr>
+      <th class='table-light text-nowrap'>{{t 'user.field.status'}}</th>
+      <td>
+        {{#if (eq user.status 0)}}
+          <span class='badge bg-secondary'>{{t 'user.status.inactive'}}</span>
+        {{else}}
+          <span class='badge bg-success'>{{t 'user.status.active'}}</span>
+        {{/if}}
+      </td>
+    </tr>
+    <tr>
+      <th class='table-light text-nowrap'>{{t 'user.field.is_super'}}</th>
+      <td>
+        {{#if user.isSuper}}{{t 'user.is_super.yes'}}{{else}}{{t
+            'user.is_super.no'
+          }}{{/if}}
+      </td>
+    </tr>
+    <tr>
+      <th class='table-light text-nowrap'>{{t 'user.field.sort'}}</th>
+      <td>{{user.sort}}</td>
+    </tr>
+    <tr>
+      <th class='table-light text-nowrap'>{{t 'user.field.created_at'}}</th>
+      <td>{{formatDate user.createdAt}}</td>
+    </tr>
+    <tr>
+      <th class='table-light text-nowrap'>{{t 'user.field.updated_at'}}</th>
+      <td>{{formatDate user.updatedAt}}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class='d-flex gap-2'>
+  <a href='/admin/users' class='btn btn-secondary'>{{t 'user.back'}}</a>
+  <a href='/admin/users/{{user.id}}/edit' class='btn btn-success'>{{t
+      'user.edit'
+    }}</a>
+</div>
