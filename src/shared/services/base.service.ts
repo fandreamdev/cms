@@ -2,16 +2,73 @@ import { HttpException, HttpStatus } from '@nestjs/common'
 import {
   DeepPartial,
   FindOneOptions,
+  FindOptionsOrder,
+  FindOptionsWhere,
+  Like,
   ObjectLiteral,
   QueryDeepPartialEntity,
   Repository,
 } from 'typeorm'
 
+/** 分页查询结果 */
+export interface PaginatedResult<T> {
+  list: T[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
 export abstract class BaseService<T extends ObjectLiteral> {
   constructor(protected repository: Repository<T>) {}
 
-  async findAll() {
-    return this.repository.find()
+  /** 需要模糊匹配（LIKE）的字段，子类按需声明；未列出的字段走精确匹配 */
+  protected fuzzyFields: (keyof T)[] = []
+
+  /** 列表默认排序，子类按需声明 */
+  protected defaultOrder?: FindOptionsOrder<T>
+
+  /** 构建 where 时需要忽略的字段（分页等非过滤参数） */
+  private static readonly NON_FILTER_KEYS = ['page', 'pageSize']
+
+  /** 把查询 DTO 构建成 TypeORM 的 where 条件 */
+  protected buildWhere(query: object): FindOptionsWhere<T> {
+    const where: FindOptionsWhere<T> = {}
+    for (const [key, value] of Object.entries(query)) {
+      // 跳过分页等非过滤字段
+      if (BaseService.NON_FILTER_KEYS.includes(key)) continue
+      // 跳过空条件
+      if (value === undefined || value === null || value === '') continue
+      const field = key as keyof T
+      if (this.fuzzyFields.includes(field) && typeof value === 'string') {
+        where[field] = Like(`%${value}%`) as never
+      } else {
+        where[field] = value as never
+      }
+    }
+    return where
+  }
+
+  async findAll(
+    query: { page?: number; pageSize?: number } = {},
+  ): Promise<PaginatedResult<T>> {
+    const page = query.page && query.page > 0 ? query.page : 1
+    const pageSize = query.pageSize && query.pageSize > 0 ? query.pageSize : 10
+
+    const [list, total] = await this.repository.findAndCount({
+      where: this.buildWhere(query),
+      ...(this.defaultOrder ? { order: this.defaultOrder } : {}),
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    })
+
+    return {
+      list,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize) || 1,
+    }
   }
 
   async findOne(options: FindOneOptions<T>) {
