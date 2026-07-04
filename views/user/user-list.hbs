@@ -1,32 +1,247 @@
 <h1>{{t 'user.list_title'}}</h1>
-<div class='d-flex justify-content-end'>
-  <a href='/admin/users/create' class='btn btn-success mb-3 right'>{{t
-      'user.add_user'
-    }}</a>
-</div>
-<table class='table'>
+<form class='d-flex flex-wrap align-items-center gap-4 mb-4 mt-4'>
+  <div class='d-flex align-items-center field-item'>
+    <label class='me-2 text-nowrap' for='username'>{{t
+        'user.field.username'
+      }}</label>
+    <input
+      type='text'
+      class='form-control'
+      id='username'
+      name='username'
+      placeholder='Username'
+      value='{{query.username}}'
+    />
+  </div>
+  <div class='d-flex align-items-center field-item'>
+    <label class='me-2 text-nowrap' for='mobile'>{{t
+        'user.field.mobile'
+      }}</label>
+    <input
+      type='text'
+      class='form-control'
+      id='mobile'
+      name='mobile'
+      placeholder='Mobile'
+      value='{{query.mobile}}'
+    />
+  </div>
+  <div class='d-flex align-items-center field-item'>
+    <label class='me-2 text-nowrap' for='email'>{{t 'user.field.email'}}</label>
+    <input
+      type='text'
+      class='form-control'
+      id='email'
+      name='email'
+      placeholder='Email'
+      value='{{query.email}}'
+    />
+  </div>
+  <div class='d-flex align-items-center field-item'>
+    <label class='me-2 text-nowrap' for='status'>{{t
+        'user.field.status'
+      }}</label>
+    <select class='form-select' id='status' name='status' aria-label='status'>
+      <option value=''>Choose...</option>
+      <option value='0' {{#if (eq query.status '0')}}selected{{/if}}>{{t
+          'user.status.inactive'
+        }}</option>
+      <option value='1' {{#if (eq query.status '1')}}selected{{/if}}>{{t
+          'user.status.active'
+        }}</option>
+    </select>
+  </div>
+  <div class='d-flex align-items-center field-item'>
+    <label class='me-2 text-nowrap' for='isSuper'>{{t
+        'user.field.is_super'
+      }}</label>
+    <select
+      class='form-select'
+      id='isSuper'
+      name='isSuper'
+      aria-label='isSuper'
+    >
+      <option value=''>Choose...</option>
+      <option value='true' {{#if (eq query.isSuper true)}}selected{{/if}}>{{t
+          'user.is_super.yes'
+        }}</option>
+      <option value='false' {{#if (eq query.isSuper false)}}selected{{/if}}>{{t
+          'user.is_super.no'
+        }}</option>
+    </select>
+  </div>
+  <div class='d-flex justify-content-between w-100'>
+    <div class='d-flex gap-2'>
+      <button type='submit' class='btn btn-primary btn-eq'>{{t
+          'user.search'
+        }}</button>
+      <button type='button' class='btn btn-secondary btn-eq'>{{t
+          'user.export'
+        }}</button>
+    </div>
+    <a href='/admin/users/create' class='btn btn-success btn-eq'>{{t
+        'user.add_user'
+      }}</a>
+  </div>
+</form>
+
+<table class='table align-middle'>
   <thead>
     <tr>
       <th>{{t 'user.field.username'}}</th>
       <th>{{t 'user.field.email'}}</th>
+      <th class='text-center'>{{t 'user.field.status'}}</th>
+      <th>{{t 'user.field.sort'}}</th>
+      <th>操作</th>
     </tr>
   </thead>
   <tbody>
     {{#each users}}
-      <tr>
+      <tr data-id='{{this.id}}'>
         <td>{{this.username}}</td>
         <td>{{this.email}}</td>
+        <td class='text-center'>
+          <div class='form-check form-switch m-0 ps-0 d-flex justify-content-center 
+          align-items-center'>
+            <input
+              type='checkbox'
+              class='form-check-input m-0 js-status-toggle'
+              role='switch'
+              {{#unless (eq this.status 0)}}checked{{/unless}}
+            />
+          </div>
+        </td>
+        <td>{{this.sort}}</td>
         <td>
           <a
-            href='/admin/users/update/{{this.id}}'
+            href='/admin/users/{{this.id}}/edit'
             class='btn btn-success'
           >编辑</a>
-          <a
-            href='/admin/users/delete/{{this.id}}'
-            class='btn btn-danger'
-          >删除</a>
+          <button type='button' class='btn btn-danger js-delete'>删除</button>
         </td>
       </tr>
     {{/each}}
   </tbody>
 </table>
+
+{{#if pagination.totalPages}}
+  <nav class='d-flex justify-content-between align-items-center'>
+    <div class='d-flex align-items-center gap-2'>
+      <span class='text-muted small'>共 {{pagination.total}} 条，第
+        {{pagination.page}}
+        /
+        {{pagination.totalPages}}
+        页</span>
+      <select
+        id='pageSize'
+        class='form-select form-select-sm w-auto js-page-size'
+        data-query='{{pagination.queryString}}'
+        aria-label='page size'
+      >
+        <option value='3' {{#if (eq pagination.pageSize 3)}}selected{{/if}}>3
+          条/页</option>
+        <option value='10' {{#if (eq pagination.pageSize 10)}}selected{{/if}}>10
+          条/页</option>
+        <option value='20' {{#if (eq pagination.pageSize 20)}}selected{{/if}}>20
+          条/页</option>
+        <option value='50' {{#if (eq pagination.pageSize 50)}}selected{{/if}}>50
+          条/页</option>
+        <option value='100' {{#if (eq pagination.pageSize 100)}}selected{{/if}}>100
+          条/页</option>
+      </select>
+    </div>
+    <ul class='pagination mb-0'>
+      <li class='page-item {{#unless pagination.hasPrev}}disabled{{/unless}}'>
+        <a
+          class='page-link'
+          href='?page={{pagination.prevPage}}&pageSize={{pagination.pageSize}}{{#if pagination.queryString}}&{{pagination.queryString}}{{/if}}'
+        >上一页</a>
+      </li>
+      {{#each pagination.items}}
+        <li class='page-item {{#if this.active}}active{{/if}}'>
+          <a
+            class='page-link'
+            href='?page={{this.page}}&pageSize={{../pagination.pageSize}}{{#if ../pagination.queryString}}&{{../pagination.queryString}}{{/if}}'
+          >{{this.page}}</a>
+        </li>
+      {{/each}}
+      <li class='page-item {{#unless pagination.hasNext}}disabled{{/unless}}'>
+        <a
+          class='page-link'
+          href='?page={{pagination.nextPage}}&pageSize={{pagination.pageSize}}{{#if pagination.queryString}}&{{pagination.queryString}}{{/if}}'
+        >下一页</a>
+      </li>
+    </ul>
+  </nav>
+{{/if}}
+
+<style>
+  /* 统一按钮宽度，保证查询/导出/新增大小一致 */
+  .btn-eq {
+    min-width: 88px;
+  }
+
+  /* 每个查询项：一行最多 4 个。
+     父级 gap 为 1rem，一行 4 个有 3 个间隙，故基准宽度 = 25% - 3/4 * 1rem，
+     第 5 个会随 flex-wrap 自动换行。窄屏下低于 min-width 时也会换行。 */
+  .field-item {
+    flex: 1 1 calc(25% - 0.75rem);
+    min-width: 240px;
+  }
+</style>
+
+<script>
+  $(function () {
+    // 切换每页大小：重置到第 1 页，保留过滤条件
+    $('.js-page-size').on('change', function () {
+      var pageSize = $(this).val()
+      var query = $(this).data('query')
+      var url = '?page=1&pageSize=' + pageSize
+      if (query) {
+        url += '&' + query
+      }
+      window.location.href = url
+    })
+
+    // 切换是否生效
+    $('.js-status-toggle').on('change', function () {
+      var $input = $(this)
+      var id = $input.closest('tr').data('id')
+      $input.prop('disabled', true)
+      $.ajax({
+        url: '/admin/users/' + id + '/status',
+        method: 'PUT',
+      })
+        .done(function (res) {
+          $input.prop('checked', res.status === 1)
+        })
+        .fail(function () {
+          // 失败回滚开关状态
+          $input.prop('checked', !$input.prop('checked'))
+          alert('状态更新失败')
+        })
+        .always(function () {
+          $input.prop('disabled', false)
+        })
+    })
+
+    // 删除用户（带确认框）
+    $('.js-delete').on('click', function () {
+      var $row = $(this).closest('tr')
+      var id = $row.data('id')
+      if (!confirm('确定要删除该用户吗？')) {
+        return
+      }
+      $.ajax({
+        url: '/admin/users/' + id,
+        method: 'DELETE',
+      })
+        .done(function () {
+          $row.remove()
+        })
+        .fail(function () {
+          alert('删除失败')
+        })
+    })
+  })
+</script>

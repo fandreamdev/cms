@@ -7,18 +7,20 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  Query,
 } from '@nestjs/common'
 import { UserService } from '../../shared/services/user.service'
 import { UserCreateDto, UserUpdateDto } from '../dto'
 import { I18nValidationPipe } from 'nestjs-i18n'
+import { UserQueryDto } from '../dto/user-query.dto'
 
 @Controller('api/users')
 export class UserController {
   constructor(private userService: UserService) {}
 
   @Get()
-  async list() {
-    return this.userService.findAll()
+  async list(@Query() userQueryDto: UserQueryDto) {
+    return this.userService.findAll(userQueryDto)
   }
 
   @Get(':id')

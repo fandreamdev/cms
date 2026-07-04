@@ -3,16 +3,24 @@
   "form_title_create": "Create User",
   "form_title_update": "Edit User",
   "add_user": "Add User",
+  "search": "Search",
+  "export": "Export",
   "field": {
     "username": "Username",
     "password": "Password",
+    "mobile": "Mobile",
     "email": "Email",
     "status": "Status",
+    "is_super": "Super Admin",
     "sort": "Sort"
   },
   "status": {
     "placeholder": "Please select whether the user is active",
     "inactive": "Inactive",
     "active": "Active"
+  },
+  "is_super": {
+    "yes": "Yes",
+    "no": "No"
   }
 }

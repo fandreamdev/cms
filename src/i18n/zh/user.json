@@ -3,16 +3,24 @@
   "form_title_create": "创建用户",
   "form_title_update": "编辑用户",
   "add_user": "添加用户",
+  "search": "查询",
+  "export": "导出",
   "field": {
     "username": "用户名",
     "password": "密码",
+    "mobile": "手机号",
     "email": "邮箱",
     "status": "是否生效",
+    "is_super": "超级管理员",
     "sort": "排序"
   },
   "status": {
     "placeholder": "请选择该用户是否生效",
     "inactive": "未激活",
     "active": "激活"
+  },
+  "is_super": {
+    "yes": "是",
+    "no": "否"
   }
 }

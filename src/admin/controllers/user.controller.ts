@@ -1,11 +1,14 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpException,
   Param,
   ParseIntPipe,
   Post,
   Put,
+  Query,
   Redirect,
   Render,
   UseFilters,
@@ -14,6 +17,8 @@ import { UserService } from '../../shared/services/user.service'
 import { UserCreateDto, UserUpdateDto } from '../../api/dto'
 import { AdminExceptionFilter } from '../filters/admin-exception.filter'
 import { hashPassword } from '../../shared/utils/pwd'
+import { UserQueryDto } from '../../api/dto/user-query.dto'
+import { buildPaginationView } from '../../shared/utils/pagination'
 
 @Controller('admin/users')
 @UseFilters(AdminExceptionFilter)
@@ -22,9 +27,15 @@ export class UserController {
 
   @Get()
   @Render('user/user-list')
-  async findAll() {
-    const users = await this.userService.findAll()
-    return { users }
+  async findAll(@Query() userQueryDto: UserQueryDto) {
+    const result = await this.userService.findAll(userQueryDto)
+    return {
+      users: result.list,
+      // 分页信息（翻页链接保留当前过滤条件）
+      pagination: buildPaginationView(result, { ...userQueryDto }),
+      // 把查询条件回传给模板，用于回填搜索表单
+      query: userQueryDto,
+    }
   }
 
   @Get('create')
@@ -42,10 +53,13 @@ export class UserController {
     return this.userService.create(createDto)
   }
 
-  @Get('update/:id')
+  @Get(':id/edit')
   @Render('user/user-form')
   async updateForm(@Param('id', ParseIntPipe) id: number) {
     const user = await this.userService.findOne({ where: { id } })
+    if (!user) {
+      throw new HttpException('User not Found', 404)
+    }
     return { user }
   }
 
@@ -58,8 +72,18 @@ export class UserController {
     return this.userService.update(id, updateDto)
   }
 
-  @Get('update/delete/:id')
-  @Redirect('/admin/users')
+  @Put(':id/status')
+  async toggleStatus(@Param('id', ParseIntPipe) id: number) {
+    const user = await this.userService.findOne({ where: { id } })
+    if (!user) {
+      throw new HttpException('User not Found', 404)
+    }
+    const status = user.status === 1 ? 0 : 1
+    await this.userService.update(id, { status })
+    return { success: true, status }
+  }
+
+  @Delete(':id')
   async delete(@Param('id', ParseIntPipe) id: number) {
     return this.userService.delete(id)
   }
