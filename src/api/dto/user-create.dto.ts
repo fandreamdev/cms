@@ -1,5 +1,5 @@
 import { applyDecorators } from '@nestjs/common'
-import { Transform, Type } from 'class-transformer'
+import { Type } from 'class-transformer'
 import {
   IsBoolean,
   IsEmail,
@@ -13,6 +13,7 @@ import {
 } from 'class-validator'
 import { IsUserAlreadyExist } from '../../shared/validators/is-username-unique.validator'
 import { i18nValidationMessage } from 'nestjs-i18n'
+import { EmptyStringToUndefined } from '../../shared/decorator/empty-string-to-undefined.decorator'
 
 export class UserCreateDto {
   @UsernameValidators()
@@ -153,13 +154,5 @@ function SortValidators() {
         min: 0,
       }),
     }),
-  )
-}
-
-// 表单提交的空字段是空字符串 ""，会绕过 @IsOptional。
-// 这里把 "" 转成 undefined，让可选校验正常放行。
-function EmptyStringToUndefined() {
-  return Transform(({ value }: { value: unknown }) =>
-    value === '' ? undefined : value,
   )
 }

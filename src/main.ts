@@ -14,7 +14,6 @@ import {
   I18nValidationExceptionFilter,
   I18nValidationPipe,
 } from 'nestjs-i18n'
-import { Request } from 'express'
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
@@ -24,7 +23,9 @@ async function bootstrap() {
 
   useContainer(app.select(AppModule), { fallbackOnErrors: true })
 
-  app.useGlobalPipes(new I18nValidationPipe({ transform: true }))
+  app.useGlobalPipes(
+    new I18nValidationPipe({ transform: true, whitelist: true }),
+  )
   app.useGlobalFilters(
     new I18nValidationExceptionFilter({ detailedErrors: true }),
   )
