@@ -300,29 +300,70 @@ function renderI18nJson(
     labels[field.columnName] =
       useComments && field.comment ? field.comment : titleize(field.name)
   }
+  const title = titleize(entityName)
+  const messages = useComments
+    ? {
+        list_title: `${title}列表`,
+        form_title_create: `创建${title}`,
+        form_title_update: `编辑${title}`,
+        detail_title: `${title}详情`,
+        add: `添加${title}`,
+        search: '查询',
+        export: '导出',
+        view: '查看',
+        edit: '编辑',
+        delete: '删除',
+        back: '返回',
+        actions: '操作',
+        total: '共',
+        page: '第',
+        prev: '上一页',
+        next: '下一页',
+        delete_confirm: '确定要删除这条记录吗？',
+        delete_failed: '删除失败',
+        status: {
+          placeholder: '请选择',
+          inactive: '未激活',
+          active: '激活',
+        },
+        boolean: {
+          yes: '是',
+          no: '否',
+        },
+      }
+    : {
+        list_title: `${title} List`,
+        form_title_create: `Create ${title}`,
+        form_title_update: `Edit ${title}`,
+        detail_title: `${title} Detail`,
+        add: `Add ${title}`,
+        search: 'Search',
+        export: 'Export',
+        view: 'View',
+        edit: 'Edit',
+        delete: 'Delete',
+        back: 'Back',
+        actions: 'Actions',
+        total: 'Total',
+        page: 'Page',
+        prev: 'Prev',
+        next: 'Next',
+        delete_confirm: 'Delete this record?',
+        delete_failed: 'Delete failed',
+        status: {
+          placeholder: 'Choose...',
+          inactive: 'Inactive',
+          active: 'Active',
+        },
+        boolean: {
+          yes: 'Yes',
+          no: 'No',
+        },
+      }
   return JSON.stringify(
     {
-      list_title: `${titleize(entityName)} List`,
-      form_title_create: `Create ${titleize(entityName)}`,
-      form_title_update: `Edit ${titleize(entityName)}`,
-      detail_title: `${titleize(entityName)} Detail`,
-      add: `Add ${titleize(entityName)}`,
-      search: 'Search',
-      export: 'Export',
-      view: 'View',
-      edit: 'Edit',
-      delete: 'Delete',
-      back: 'Back',
+      ...messages,
       field: labels,
-      status: {
-        placeholder: 'Choose...',
-        inactive: 'Inactive',
-        active: 'Active',
-      },
-      boolean: {
-        yes: 'Yes',
-        no: 'No',
-      },
     },
     null,
     2,

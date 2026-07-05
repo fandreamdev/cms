@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
 import cookieParser from 'cookie-parser'
+import { NextFunction, Request, Response } from 'express'
 import session from 'express-session'
 import methodOverride from 'method-override'
 import { NestExpressApplication } from '@nestjs/platform-express'
@@ -53,12 +54,16 @@ async function bootstrap() {
       },
     }),
   )
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    res.locals.currentPath = req.path
+    next()
+  })
 
   // 配置静态文件根目录
-  app.useStaticAssets(join(__dirname, '..', 'public'))
+  app.useStaticAssets(join(process.cwd(), 'public'))
 
   // 配置模版文件的根目录
-  app.setBaseViewsDir(join(__dirname, '..', 'views'))
+  app.setBaseViewsDir(join(process.cwd(), 'views'))
   // 把 nestjs-i18n 的 t helper 注册到 express-handlebars 引擎上
   // （nestjs-i18n 自带的 hbs 集成只作用于 hbs 包，这里手动接到实际使用的引擎）
   const i18nService = app.get<I18nService>(I18nService)
@@ -69,6 +74,11 @@ async function bootstrap() {
       helpers: {
         t: i18nService.hbsHelper,
         eq: (a: unknown, b: unknown) => a === b,
+        isPermissionMenuOpen: (currentPath: unknown) =>
+          typeof currentPath === 'string' &&
+          ['/admin/users', '/admin/roles'].some((path) =>
+            currentPath.startsWith(path),
+          ),
         formatDate,
       },
       runtimeOptions: {

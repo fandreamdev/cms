@@ -1,0 +1,35 @@
+{
+  "list_title": "Role List",
+  "form_title_create": "Create Role",
+  "form_title_update": "Edit Role",
+  "detail_title": "Role Detail",
+  "add": "Add Role",
+  "search": "Search",
+  "export": "Export",
+  "view": "View",
+  "edit": "Edit",
+  "delete": "Delete",
+  "back": "Back",
+  "actions": "Actions",
+  "total": "Total",
+  "page": "Page",
+  "prev": "Prev",
+  "next": "Next",
+  "delete_confirm": "Delete this record?",
+  "delete_failed": "Delete failed",
+  "field": {
+    "id": "Id",
+    "name": "Name",
+    "created_at": "Created At",
+    "updated_at": "Updated At"
+  },
+  "status": {
+    "placeholder": "Choose...",
+    "inactive": "Inactive",
+    "active": "Active"
+  },
+  "boolean": {
+    "yes": "Yes",
+    "no": "No"
+  }
+}

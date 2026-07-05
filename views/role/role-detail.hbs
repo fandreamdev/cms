@@ -1,0 +1,27 @@
+<h1>{{t 'role.detail_title'}}</h1>
+
+<table class='table table-bordered align-middle w-auto'>
+  <tbody>
+    <tr>
+      <th class='table-light text-nowrap'>{{t 'role.field.id'}}</th>
+      <td>{{role.id}}</td>
+    </tr>
+    <tr>
+      <th class='table-light text-nowrap'>{{t 'role.field.name'}}</th>
+      <td>{{role.name}}</td>
+    </tr>
+    <tr>
+      <th class='table-light text-nowrap'>{{t 'role.field.created_at'}}</th>
+      <td>{{formatDate role.createdAt}}</td>
+    </tr>
+    <tr>
+      <th class='table-light text-nowrap'>{{t 'role.field.updated_at'}}</th>
+      <td>{{formatDate role.updatedAt}}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class='d-flex gap-2'>
+  <a href='/admin/roles' class='btn btn-secondary'>{{t 'role.back'}}</a>
+  <a href='/admin/roles/{{role.id}}/edit' class='btn btn-success'>{{t 'role.edit'}}</a>
+</div>
