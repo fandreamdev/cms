@@ -1,0 +1,51 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common'
+import { I18nValidationPipe } from 'nestjs-i18n'
+import { <%= classify(entityName) %>Service } from '../../shared/services/<%= dasherize(entityName) %>.service'
+import { <%= classify(entityName) %>CreateDto, <%= classify(entityName) %>UpdateDto } from '../dto'
+import { <%= classify(entityName) %>QueryDto } from '../dto/<%= dasherize(entityName) %>-query.dto'
+
+@Controller('api/<%= plural(dasherize(entityName)) %>')
+export class <%= classify(entityName) %>Controller {
+  constructor(private readonly <%= camelize(entityName) %>Service: <%= classify(entityName) %>Service) {}
+
+  @Get()
+  async list(@Query() queryDto: <%= classify(entityName) %>QueryDto) {
+    return this.<%= camelize(entityName) %>Service.findAll(queryDto)
+  }
+
+  @Get(':id')
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.<%= camelize(entityName) %>Service.findOne({ where: { id } })
+  }
+
+  @Post()
+  async create(
+    @Body(new I18nValidationPipe({ transform: true }))
+    createDto: <%= classify(entityName) %>CreateDto,
+  ) {
+    return this.<%= camelize(entityName) %>Service.create(createDto)
+  }
+
+  @Put(':id')
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateDto: <%= classify(entityName) %>UpdateDto,
+  ) {
+    return this.<%= camelize(entityName) %>Service.update(id, updateDto)
+  }
+
+  @Delete(':id')
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    return this.<%= camelize(entityName) %>Service.delete(id)
+  }
+}

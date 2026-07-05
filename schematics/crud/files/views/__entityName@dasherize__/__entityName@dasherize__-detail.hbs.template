@@ -1,0 +1,12 @@
+<h1>{{t '<%= dasherize(entityName) %>.detail_title'}}</h1>
+
+<table class='table table-bordered align-middle w-auto'>
+  <tbody>
+<%= renderDetailRows(dasherize(entityName), entity) %>
+  </tbody>
+</table>
+
+<div class='d-flex gap-2'>
+  <a href='/admin/<%= plural(dasherize(entityName)) %>' class='btn btn-secondary'>{{t '<%= dasherize(entityName) %>.back'}}</a>
+  <a href='/admin/<%= plural(dasherize(entityName)) %>/{{<%= camelize(entityName) %>.id}}/edit' class='btn btn-success'>{{t '<%= dasherize(entityName) %>.edit'}}</a>
+</div>

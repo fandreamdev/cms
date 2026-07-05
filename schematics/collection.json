@@ -1,0 +1,10 @@
+{
+  "$schema": "../node_modules/@angular-devkit/schematics/collection-schema.json",
+  "schematics": {
+    "crud": {
+      "description": "Generate CMS CRUD files from src/shared/entities/<name>.entity.ts.",
+      "factory": "./crud/index#crud",
+      "schema": "./crud/schema.json"
+    }
+  }
+}

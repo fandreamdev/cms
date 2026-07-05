@@ -5,8 +5,12 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "schematics": "./schematics/collection.json",
   "scripts": {
     "build": "nest build",
+    "schematics:build": "tsc -p schematics/tsconfig.json",
+    "pregenerate:crud": "npm run schematics:build",
+    "generate:crud": "schematics .:crud --no-dry-run",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -39,6 +43,7 @@
     "mysql2": "^3.22.5",
     "nest-winston": "^1.10.2",
     "nestjs-i18n": "^10.8.4",
+    "pluralize": "^8.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "typeorm": "^1.0.0",
@@ -46,6 +51,9 @@
     "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
+    "@angular-devkit/core": "^21.2.18",
+    "@angular-devkit/schematics": "^21.2.18",
+    "@angular-devkit/schematics-cli": "^21.2.18",
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
     "@nestjs/cli": "^11.0.0",
@@ -58,6 +66,7 @@
     "@types/jest": "^30.0.0",
     "@types/method-override": "^3.0.0",
     "@types/node": "^24.0.0",
+    "@types/pluralize": "^0.0.33",
     "@types/supertest": "^7.0.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",

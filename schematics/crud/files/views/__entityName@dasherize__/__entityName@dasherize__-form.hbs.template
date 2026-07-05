@@ -1,0 +1,8 @@
+<h1>{{#if <%= camelize(entityName) %>.id}}{{t '<%= dasherize(entityName) %>.form_title_update'}}{{else}}{{t '<%= dasherize(entityName) %>.form_title_create'}}{{/if}}</h1>
+<form
+  method='post'
+  action='{{#if <%= camelize(entityName) %>.id}}/admin/<%= plural(dasherize(entityName)) %>/{{<%= camelize(entityName) %>.id}}?_method=PUT{{else}}/admin/<%= plural(dasherize(entityName)) %>{{/if}}'
+>
+<%= renderFormInputs(dasherize(entityName), entity) %>
+  <button type='submit' class='btn btn-primary'>{{t 'common.save'}}</button>
+</form>

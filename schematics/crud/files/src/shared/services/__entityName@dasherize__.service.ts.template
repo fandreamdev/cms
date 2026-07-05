@@ -1,0 +1,16 @@
+import { Injectable, Logger } from '@nestjs/common'
+import { InjectRepository } from '@nestjs/typeorm'
+import {<% if (hasDefaultOrder(entity)) { %> FindOptionsOrder,<% } %> Repository } from 'typeorm'
+import { <%= entity.className %> } from '../entities/<%= dasherize(entityName) %>.entity'
+import { BaseService } from './base.service'
+
+@Injectable()
+export class <%= classify(entityName) %>Service extends BaseService<<%= entity.className %>> {
+  protected readonly logger = new Logger(<%= classify(entityName) %>Service.name)
+  protected fuzzyFields: (keyof <%= entity.className %>)[] = [<%= fuzzyFields(entity) %>]
+<% if (hasDefaultOrder(entity)) { %>  protected defaultOrder: FindOptionsOrder<<%= entity.className %>> = { <%= defaultOrderField(entity) %>: 'ASC' }
+<% } %>
+  constructor(@InjectRepository(<%= entity.className %>) protected repository: Repository<<%= entity.className %>>) {
+    super(repository)
+  }
+}

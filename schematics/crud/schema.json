@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "$id": "CmsCrudSchema",
+  "title": "CMS CRUD Options",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Entity name, for example role."
+    }
+  },
+  "required": ["name"]
+}
