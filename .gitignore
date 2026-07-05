@@ -2,6 +2,9 @@
 /dist
 /node_modules
 /build
+/schematics/**/*.js
+/schematics/**/*.js.map
+/schematics/**/*.d.ts
 
 # Logs
 logs

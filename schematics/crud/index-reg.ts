@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Rule,
   SchematicContext,
@@ -112,8 +115,8 @@ function parseEntity(sourceText: string, entityPath: string): EntityMeta {
     if (!decoratorName) continue
 
     const name = member.name.getText(sourceFile)
-    const decoratorCall = getDecoratorCall(member, decoratorName, sourceFile)
-    const options = parseColumnOptions(decoratorCall)
+    const decoratorText = getDecoratorText(member, decoratorName, sourceFile)
+    const options = parseColumnOptions(decoratorText)
     fields.push({
       name,
       columnName: options.name || snakeCase(name),
@@ -141,11 +144,10 @@ function parseEntity(sourceText: string, entityPath: string): EntityMeta {
 }
 
 function updateAdminModule(entityName: string): Rule {
-  return updateFile('/src/admin/admin.module.ts', (content, filePath) => {
+  return updateFile('/src/admin/admin.module.ts', (content) => {
     const className = `${strings.classify(entityName)}Controller`
     return addImport(
-      addArrayItem(content, filePath, 'controllers', className),
-      filePath,
+      addArrayItem(content, 'controllers', className),
       className,
       `./controllers/${entityName}.controller`,
     )
@@ -153,11 +155,10 @@ function updateAdminModule(entityName: string): Rule {
 }
 
 function updateApiModule(entityName: string): Rule {
-  return updateFile('/src/api/api.module.ts', (content, filePath) => {
+  return updateFile('/src/api/api.module.ts', (content) => {
     const className = `${strings.classify(entityName)}Controller`
     return addImport(
-      addArrayItem(content, filePath, 'controllers', className),
-      filePath,
+      addArrayItem(content, 'controllers', className),
       className,
       `./controller/${entityName}.controller`,
     )
@@ -165,35 +166,25 @@ function updateApiModule(entityName: string): Rule {
 }
 
 function updateSharedModule(entityName: string, entityClassName: string): Rule {
-  return updateFile('/src/shared/shared.module.ts', (content, filePath) => {
+  return updateFile('/src/shared/shared.module.ts', (content) => {
     const serviceName = `${strings.classify(entityName)}Service`
     let next = addImport(
       content,
-      filePath,
       serviceName,
       `./services/${entityName}.service`,
     )
-    next = addImport(
-      next,
-      filePath,
-      entityClassName,
-      `./entities/${entityName}.entity`,
-    )
-    next = addTypeOrmFeature(next, filePath, entityClassName)
-    next = addArrayItem(next, filePath, 'providers', serviceName)
-    next = addArrayItem(next, filePath, 'exports', serviceName)
+    next = addImport(next, entityClassName, `./entities/${entityName}.entity`)
+    next = addTypeOrmFeature(next, entityClassName)
+    next = addArrayItem(next, 'providers', serviceName)
+    next = addArrayItem(next, 'exports', serviceName)
     return next
   })
 }
 
 function updateDtoIndex(entityName: string): Rule {
-  return updateFile('/src/api/dto/index.ts', (content, filePath) => {
-    let next = addExport(
-      content,
-      filePath,
-      `./${entityName}/${entityName}-create.dto`,
-    )
-    next = addExport(next, filePath, `./${entityName}/${entityName}-update.dto`)
+  return updateFile('/src/api/dto/index.ts', (content) => {
+    let next = addExport(content, `./${entityName}/${entityName}-create.dto`)
+    next = addExport(next, `./${entityName}/${entityName}-update.dto`)
     return next
   })
 }
@@ -220,12 +211,12 @@ function resolveEntityPath(tree: Tree, entityName: string): string {
 
 function updateFile(
   filePath: string,
-  updater: (content: string, filePath: string) => string,
+  updater: (content: string) => string,
 ): Rule {
   return (tree: Tree) => {
     if (!tree.exists(filePath)) return tree
     const content = tree.readText(filePath)
-    const next = updater(content, filePath)
+    const next = updater(content)
     if (next !== content) tree.overwrite(filePath, next)
     return tree
   }
@@ -556,252 +547,78 @@ function detailValue(
 
 function addImport(
   content: string,
-  filePath: string,
   identifier: string,
   modulePath: string,
 ): string {
-  const sourceFile = createSourceFile(filePath, content)
-  const importDeclarations = sourceFile.statements.filter(
-    ts.isImportDeclaration,
-  )
-  const existingImport = importDeclarations.find(
-    (statement) =>
-      getImportModulePath(statement, sourceFile) === modulePath &&
-      hasNamedImport(statement, identifier),
-  )
-  if (existingImport) return content
-
+  if (content.includes(`import { ${identifier} } from '${modulePath}'`))
+    return content
   const importLine = `import { ${identifier} } from '${modulePath}'\n`
-  const lastImport = importDeclarations[importDeclarations.length - 1]
-  if (!lastImport) return `${importLine}${content}`
+  const importPattern = /import[\s\S]*?from ['"][^'"]+['"]\r?\n/g
+  let lastImportEnd = 0
+  let match: RegExpExecArray | null
+  while ((match = importPattern.exec(content)) !== null) {
+    lastImportEnd = match.index + match[0].length
+  }
 
-  const lastImportEnd = getLineEnd(content, lastImport.end)
+  if (!lastImportEnd) return `${importLine}${content}`
   return `${content.slice(0, lastImportEnd)}${importLine}${content.slice(lastImportEnd)}`
 }
 
-function addArrayItem(
-  content: string,
-  filePath: string,
-  property: string,
-  item: string,
-): string {
-  const sourceFile = createSourceFile(filePath, content)
-  const arrayLiteral = findModuleArrayProperty(sourceFile, property)
-  if (!arrayLiteral) return content
-
+function addArrayItem(content: string, property: string, item: string): string {
   if (
-    arrayLiteral.elements.some(
-      (element) => element.getText(sourceFile) === item,
-    )
-  )
+    new RegExp(`${property}\\s*:\\s*\\[[^\\]]*\\b${item}\\b`, 's').test(content)
+  ) {
     return content
-
-  return insertArrayElement(content, sourceFile, arrayLiteral, item)
+  }
+  return content.replace(
+    new RegExp(`(${property}\\s*:\\s*\\[)([^\\]]*)(\\])`, 's'),
+    (_match, start, body, end) => {
+      const trimmed = body.trim()
+      return `${start}${trimmed ? `${trimmed}, ${item}` : item}${end}`
+    },
+  )
 }
 
-function addTypeOrmFeature(
-  content: string,
-  filePath: string,
-  item: string,
-): string {
-  const sourceFile = createSourceFile(filePath, content)
-  const arrayLiteral = findTypeOrmFeatureArray(sourceFile)
-  if (!arrayLiteral) return content
-
+function addTypeOrmFeature(content: string, item: string): string {
   if (
-    arrayLiteral.elements.some(
-      (element) => element.getText(sourceFile) === item,
-    )
-  )
+    new RegExp(
+      `TypeOrmModule\\.forFeature\\(\\[[^\\]]*\\b${item}\\b`,
+      's',
+    ).test(content)
+  ) {
     return content
-
-  return insertArrayElement(content, sourceFile, arrayLiteral, item)
+  }
+  return content.replace(
+    /TypeOrmModule\.forFeature\(\[([^\]]*)\]\)/s,
+    (_match, body) => {
+      const trimmed = body.trim()
+      return `TypeOrmModule.forFeature([${trimmed ? `${trimmed}, ${item}` : item}])`
+    },
+  )
 }
 
-function addExport(
-  content: string,
-  filePath: string,
-  modulePath: string,
-): string {
-  const sourceFile = createSourceFile(filePath, content)
+function addExport(content: string, modulePath: string): string {
   const line = `export * from '${modulePath}'`
-  const hasExport = sourceFile.statements.some(
-    (statement) =>
-      ts.isExportDeclaration(statement) &&
-      !statement.exportClause &&
-      statement.moduleSpecifier &&
-      ts.isStringLiteral(statement.moduleSpecifier) &&
-      statement.moduleSpecifier.text === modulePath,
-  )
-  if (hasExport) return content
-
+  if (content.includes(line)) return content
   return `${content.trimEnd()}\n${line}\n`
 }
 
-function createSourceFile(filePath: string, content: string): ts.SourceFile {
-  return ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true)
-}
-
-function getImportModulePath(
-  statement: ts.ImportDeclaration,
-  sourceFile: ts.SourceFile,
-): string | undefined {
-  const moduleSpecifier = statement.moduleSpecifier
-  return ts.isStringLiteral(moduleSpecifier)
-    ? moduleSpecifier.text
-    : moduleSpecifier.getText(sourceFile)
-}
-
-function hasNamedImport(
-  statement: ts.ImportDeclaration,
-  identifier: string,
-): boolean {
-  const importClause = statement.importClause
-  const namedBindings = importClause?.namedBindings
-  return Boolean(
-    namedBindings &&
-    ts.isNamedImports(namedBindings) &&
-    namedBindings.elements.some((element) => element.name.text === identifier),
-  )
-}
-
-function getLineEnd(content: string, position: number): number {
-  if (content[position] === '\r' && content[position + 1] === '\n') {
-    return position + 2
+function parseColumnOptions(decoratorText: string) {
+  return {
+    type: cleanOption(matchOption(decoratorText, 'type')),
+    name: cleanOption(matchOption(decoratorText, 'name')),
+    comment: cleanOption(matchOption(decoratorText, 'comment')),
+    nullable: /nullable\s*:\s*true/.test(decoratorText),
+    hasDefault: /default\s*:/.test(decoratorText),
   }
-  if (content[position] === '\n') return position + 1
-  return position
 }
 
-function findModuleArrayProperty(
-  sourceFile: ts.SourceFile,
-  propertyName: string,
-): ts.ArrayLiteralExpression | undefined {
-  let arrayLiteral: ts.ArrayLiteralExpression | undefined
-  visit(sourceFile, (node) => {
-    if (arrayLiteral || !ts.isDecorator(node)) return
-    const expression = node.expression
-    if (!ts.isCallExpression(expression)) return
-    if (expression.expression.getText(sourceFile) !== 'Module') return
-    const moduleOptions = expression.arguments.find(
-      ts.isObjectLiteralExpression,
-    )
-    if (!moduleOptions) return
-    const property = findObjectArrayProperty(
-      sourceFile,
-      moduleOptions,
-      propertyName,
-    )
-    if (property) arrayLiteral = property
-  })
-  return arrayLiteral
+function matchOption(text: string, name: string): string | undefined {
+  return text.match(new RegExp(`${name}\\s*:\\s*([^,}\\n]+)`))?.[1]?.trim()
 }
 
-function findObjectArrayProperty(
-  sourceFile: ts.SourceFile,
-  objectLiteral: ts.ObjectLiteralExpression,
-  propertyName: string,
-): ts.ArrayLiteralExpression | undefined {
-  for (const property of objectLiteral.properties) {
-    if (!ts.isPropertyAssignment(property)) continue
-    if (getPropertyName(property.name) !== propertyName) continue
-    return ts.isArrayLiteralExpression(property.initializer)
-      ? property.initializer
-      : undefined
-  }
-  return undefined
-}
-
-function getPropertyName(name: ts.PropertyName): string | undefined {
-  if (ts.isIdentifier(name) || ts.isStringLiteral(name)) return name.text
-  if (ts.isNumericLiteral(name)) return name.text
-  return undefined
-}
-
-function findTypeOrmFeatureArray(
-  sourceFile: ts.SourceFile,
-): ts.ArrayLiteralExpression | undefined {
-  let arrayLiteral: ts.ArrayLiteralExpression | undefined
-  visit(sourceFile, (node) => {
-    if (arrayLiteral || !ts.isCallExpression(node)) return
-    const expression = node.expression
-    if (!ts.isPropertyAccessExpression(expression)) return
-    if (expression.name.text !== 'forFeature') return
-    if (expression.expression.getText(sourceFile) !== 'TypeOrmModule') return
-    const firstArgument = node.arguments[0]
-    if (firstArgument && ts.isArrayLiteralExpression(firstArgument)) {
-      arrayLiteral = firstArgument
-    }
-  })
-  return arrayLiteral
-}
-
-function insertArrayElement(
-  content: string,
-  sourceFile: ts.SourceFile,
-  arrayLiteral: ts.ArrayLiteralExpression,
-  item: string,
-): string {
-  if (!arrayLiteral.elements.length) {
-    const insertPosition = arrayLiteral.getStart(sourceFile) + 1
-    return `${content.slice(0, insertPosition)}${item}${content.slice(insertPosition)}`
-  }
-
-  const lastElement = arrayLiteral.elements[arrayLiteral.elements.length - 1]
-  const insertPosition = lastElement.end
-  return `${content.slice(0, insertPosition)}, ${item}${content.slice(insertPosition)}`
-}
-
-function parseColumnOptions(decoratorCall?: ts.CallExpression) {
-  const options: {
-    type?: string
-    name?: string
-    comment?: string
-    nullable: boolean
-    hasDefault: boolean
-  } = {
-    nullable: false,
-    hasDefault: false,
-  }
-
-  if (!decoratorCall) return options
-
-  for (const argument of decoratorCall.arguments) {
-    if (ts.isStringLiteral(argument)) {
-      options.type ??= argument.text
-      continue
-    }
-    if (!ts.isObjectLiteralExpression(argument)) continue
-
-    for (const property of argument.properties) {
-      if (!ts.isPropertyAssignment(property)) continue
-      const propertyName = getPropertyName(property.name)
-      if (!propertyName) continue
-
-      if (propertyName === 'default') {
-        options.hasDefault = true
-        continue
-      }
-
-      const value = getLiteralOptionValue(property.initializer)
-      if (propertyName === 'type') options.type = value
-      if (propertyName === 'name') options.name = value
-      if (propertyName === 'comment') options.comment = value
-      if (propertyName === 'nullable') options.nullable = value === 'true'
-    }
-  }
-
-  return options
-}
-
-function getLiteralOptionValue(expression: ts.Expression): string | undefined {
-  if (ts.isStringLiteral(expression) || ts.isNumericLiteral(expression)) {
-    return expression.text
-  }
-  if (expression.kind === ts.SyntaxKind.TrueKeyword) return 'true'
-  if (expression.kind === ts.SyntaxKind.FalseKeyword) return 'false'
-  if (ts.isIdentifier(expression)) return expression.text
-  return undefined
+function cleanOption(value?: string): string | undefined {
+  return value?.replace(/^['"`]|['"`]$/g, '')
 }
 
 function getColumnDecorator(node: ts.PropertyDeclaration): string | undefined {
@@ -822,20 +639,18 @@ function hasDecorator(node: ts.Node, name: string): boolean {
   })
 }
 
-function getDecoratorCall(
+function getDecoratorText(
   node: ts.Node,
   name: string,
   sourceFile: ts.SourceFile,
-): ts.CallExpression | undefined {
+): string {
   const decorator = getDecorators(node).find((candidate) => {
     const expression = candidate.expression
     return ts.isCallExpression(expression)
       ? expression.expression.getText(sourceFile) === name
       : expression.getText(sourceFile) === name
   })
-  return decorator && ts.isCallExpression(decorator.expression)
-    ? decorator.expression
-    : undefined
+  return decorator?.getText(sourceFile) || ''
 }
 
 function getDecorators(node: ts.Node): readonly ts.Decorator[] {
