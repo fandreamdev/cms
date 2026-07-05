@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.crud = crud;
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 const schematics_1 = require("@angular-devkit/schematics");
 const ts = require("typescript");
 const pluralize_1 = require("pluralize");
@@ -167,7 +170,10 @@ function renderQueryDtoFields(entity) {
         .join('\n\n');
 }
 function renderQueryInputs(entityName, entity) {
-    return entity.listFields.slice(0, 4).map((field) => renderQueryInput(entityName, field)).join('\n');
+    return entity.listFields
+        .slice(0, 4)
+        .map((field) => renderQueryInput(entityName, field))
+        .join('\n');
 }
 function renderTableHeaders(entityName, entity) {
     return entity.listFields
@@ -175,7 +181,9 @@ function renderTableHeaders(entityName, entity) {
         .join('\n');
 }
 function renderTableCells(entity) {
-    return entity.listFields.map((field) => `        <td>${fieldValue(field)}</td>`).join('\n');
+    return entity.listFields
+        .map((field) => `        <td>${fieldValue(field)}</td>`)
+        .join('\n');
 }
 function renderFormInputs(entityName, entity) {
     return entity.columns
@@ -195,7 +203,8 @@ function renderDetailRows(entityName, entity) {
 function renderI18nJson(entityName, entity, useComments) {
     const labels = {};
     for (const field of entity.displayFields) {
-        labels[field.columnName] = useComments && field.comment ? field.comment : titleize(field.name);
+        labels[field.columnName] =
+            useComments && field.comment ? field.comment : titleize(field.name);
     }
     return JSON.stringify({
         list_title: `${titleize(entityName)} List`,
@@ -438,7 +447,16 @@ function detailValue(entityName, variableName, field) {
 function addImport(content, identifier, modulePath) {
     if (content.includes(`import { ${identifier} } from '${modulePath}'`))
         return content;
-    return `import { ${identifier} } from '${modulePath}'\n${content}`;
+    const importLine = `import { ${identifier} } from '${modulePath}'\n`;
+    const importPattern = /import[\s\S]*?from ['"][^'"]+['"]\r?\n/g;
+    let lastImportEnd = 0;
+    let match;
+    while ((match = importPattern.exec(content)) !== null) {
+        lastImportEnd = match.index + match[0].length;
+    }
+    if (!lastImportEnd)
+        return `${importLine}${content}`;
+    return `${content.slice(0, lastImportEnd)}${importLine}${content.slice(lastImportEnd)}`;
 }
 function addArrayItem(content, property, item) {
     if (new RegExp(`${property}\\s*:\\s*\\[[^\\]]*\\b${item}\\b`, 's').test(content)) {
@@ -481,7 +499,12 @@ function cleanOption(value) {
     return value === null || value === void 0 ? void 0 : value.replace(/^['"`]|['"`]$/g, '');
 }
 function getColumnDecorator(node) {
-    return ['PrimaryGeneratedColumn', 'CreateDateColumn', 'UpdateDateColumn', 'Column'].find((name) => hasDecorator(node, name));
+    return [
+        'PrimaryGeneratedColumn',
+        'CreateDateColumn',
+        'UpdateDateColumn',
+        'Column',
+    ].find((name) => hasDecorator(node, name));
 }
 function hasDecorator(node, name) {
     return getDecorators(node).some((decorator) => {
@@ -508,17 +531,28 @@ function visit(node, callback) {
     ts.forEachChild(node, (child) => visit(child, callback));
 }
 function isStringField(field) {
-    return field.type === 'string' || ['varchar', 'text', 'char'].includes(field.columnType || '');
+    return (field.type === 'string' ||
+        ['varchar', 'text', 'char'].includes(field.columnType || ''));
 }
 function isNumberField(field) {
     return (field.type === 'number' ||
-        ['int', 'integer', 'tinyint', 'smallint', 'bigint', 'decimal', 'float', 'double'].includes(field.columnType || ''));
+        [
+            'int',
+            'integer',
+            'tinyint',
+            'smallint',
+            'bigint',
+            'decimal',
+            'float',
+            'double',
+        ].includes(field.columnType || ''));
 }
 function isBooleanField(field) {
     return field.type === 'boolean' || field.columnType === 'boolean';
 }
 function isDateField(field) {
-    return field.type === 'Date' || ['date', 'datetime', 'timestamp'].includes(field.columnType || '');
+    return (field.type === 'Date' ||
+        ['date', 'datetime', 'timestamp'].includes(field.columnType || ''));
 }
 function isSecretField(field) {
     return ['password', 'token', 'secret'].some((part) => field.name.toLowerCase().includes(part));
@@ -538,7 +572,9 @@ function camelize(value) {
     return schematics_1.strings.camelize(value);
 }
 function titleize(value) {
-    return schematics_1.strings.classify(schematics_1.strings.dasherize(value)).replace(/([a-z])([A-Z])/g, '$1 $2');
+    return schematics_1.strings
+        .classify(schematics_1.strings.dasherize(value))
+        .replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 function snakeCase(value) {
     return schematics_1.strings.dasherize(value).replace(/-/g, '_');

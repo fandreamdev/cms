@@ -552,7 +552,16 @@ function addImport(
 ): string {
   if (content.includes(`import { ${identifier} } from '${modulePath}'`))
     return content
-  return `import { ${identifier} } from '${modulePath}'\n${content}`
+  const importLine = `import { ${identifier} } from '${modulePath}'\n`
+  const importPattern = /import[\s\S]*?from ['"][^'"]+['"]\r?\n/g
+  let lastImportEnd = 0
+  let match: RegExpExecArray | null
+  while ((match = importPattern.exec(content)) !== null) {
+    lastImportEnd = match.index + match[0].length
+  }
+
+  if (!lastImportEnd) return `${importLine}${content}`
+  return `${content.slice(0, lastImportEnd)}${importLine}${content.slice(lastImportEnd)}`
 }
 
 function addArrayItem(content: string, property: string, item: string): string {
