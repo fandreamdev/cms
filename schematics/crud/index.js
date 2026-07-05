@@ -6,11 +6,8 @@ const ts = require("typescript");
 const pluralize_1 = require("pluralize");
 function crud(options) {
     return (tree, context) => {
-        const entityName = schematics_1.strings.dasherize(options.name);
-        const entityPath = `/src/shared/entities/${entityName}.entity.ts`;
-        if (!tree.exists(entityPath)) {
-            throw new Error(`Entity not found: ${entityPath}`);
-        }
+        const entityName = normalizeEntityName(options.name);
+        const entityPath = resolveEntityPath(tree, entityName);
         const entity = parseEntity(tree.readText(entityPath), entityPath);
         const templateSource = (0, schematics_1.apply)((0, schematics_1.url)('./files'), [
             (0, schematics_1.applyTemplates)({
@@ -121,10 +118,27 @@ function updateSharedModule(entityName, entityClassName) {
 }
 function updateDtoIndex(entityName) {
     return updateFile('/src/api/dto/index.ts', (content) => {
-        let next = addExport(content, `./${entityName}-create.dto`);
-        next = addExport(next, `./${entityName}-update.dto`);
+        let next = addExport(content, `./${entityName}/${entityName}-create.dto`);
+        next = addExport(next, `./${entityName}/${entityName}-update.dto`);
         return next;
     });
+}
+function normalizeEntityName(name) {
+    return schematics_1.strings.dasherize(name);
+}
+function resolveEntityPath(tree, entityName) {
+    const candidates = [
+        entityName,
+        schematics_1.strings.dasherize(schematics_1.strings.camelize(entityName)),
+        schematics_1.strings.dasherize(schematics_1.strings.classify(entityName)),
+    ]
+        .filter((value, index, values) => values.indexOf(value) === index)
+        .map((value) => `/src/shared/entities/${value}.entity.ts`);
+    const entityPath = candidates.find((candidate) => tree.exists(candidate));
+    if (!entityPath) {
+        throw new Error(`Entity not found. Tried: ${candidates.join(', ')}`);
+    }
+    return entityPath;
 }
 function updateFile(filePath, updater) {
     return (tree) => {
@@ -310,7 +324,7 @@ function collectDtoImports(fields) {
         needsType ? "import { Type } from 'class-transformer'" : '',
         `import { ${Array.from(validators).sort().join(', ')} } from 'class-validator'`,
         needsEmpty
-            ? "import { EmptyStringToUndefined } from '../../shared/decorator/empty-string-to-undefined.decorator'"
+            ? "import { EmptyStringToUndefined } from '../../../shared/decorator/empty-string-to-undefined.decorator'"
             : '',
     ]
         .filter(Boolean)
@@ -345,7 +359,7 @@ function collectQueryImports(fields) {
             : '',
         `import { ${Array.from(validators).sort().join(', ')} } from 'class-validator'`,
         needsEmpty
-            ? "import { EmptyStringToUndefined } from '../../shared/decorator/empty-string-to-undefined.decorator'"
+            ? "import { EmptyStringToUndefined } from '../../../shared/decorator/empty-string-to-undefined.decorator'"
             : '',
     ]
         .filter(Boolean)

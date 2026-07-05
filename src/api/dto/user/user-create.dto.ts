@@ -11,9 +11,9 @@ import {
   Min,
   MinLength,
 } from 'class-validator'
-import { IsUserAlreadyExist } from '../../shared/validators/is-username-unique.validator'
+import { IsUserAlreadyExist } from '../../../shared/validators/is-username-unique.validator'
 import { i18nValidationMessage } from 'nestjs-i18n'
-import { EmptyStringToUndefined } from '../../shared/decorator/empty-string-to-undefined.decorator'
+import { EmptyStringToUndefined } from '../../../shared/decorator/empty-string-to-undefined.decorator'
 
 export class UserCreateDto {
   @UsernameValidators()

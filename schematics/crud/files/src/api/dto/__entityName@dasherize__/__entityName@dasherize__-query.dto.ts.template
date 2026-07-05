@@ -1,5 +1,5 @@
 <%= renderQueryDtoImports(entity) %>
-import { PaginationDto } from './pagination.dto'
+import { PaginationDto } from '../pagination.dto'
 
 export class <%= classify(entityName) %>QueryDto extends PaginationDto {
 <%= renderQueryDtoFields(entity).split('\n').map(function(line) { return line ? '  ' + line : line }).join('\n') %>

@@ -14,7 +14,7 @@ import {
   UseFilters,
 } from '@nestjs/common'
 import { <%= classify(entityName) %>CreateDto, <%= classify(entityName) %>UpdateDto } from '../../api/dto'
-import { <%= classify(entityName) %>QueryDto } from '../../api/dto/<%= dasherize(entityName) %>-query.dto'
+import { <%= classify(entityName) %>QueryDto } from '../../api/dto/<%= dasherize(entityName) %>/<%= dasherize(entityName) %>-query.dto'
 import { <%= classify(entityName) %>Service } from '../../shared/services/<%= dasherize(entityName) %>.service'
 import { buildPaginationView } from '../../shared/utils/pagination'
 import { AdminExceptionFilter } from '../filters/admin-exception.filter'

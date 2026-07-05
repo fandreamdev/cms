@@ -12,7 +12,7 @@ import {
 import { I18nValidationPipe } from 'nestjs-i18n'
 import { <%= classify(entityName) %>Service } from '../../shared/services/<%= dasherize(entityName) %>.service'
 import { <%= classify(entityName) %>CreateDto, <%= classify(entityName) %>UpdateDto } from '../dto'
-import { <%= classify(entityName) %>QueryDto } from '../dto/<%= dasherize(entityName) %>-query.dto'
+import { <%= classify(entityName) %>QueryDto } from '../dto/<%= dasherize(entityName) %>/<%= dasherize(entityName) %>-query.dto'
 
 @Controller('api/<%= plural(dasherize(entityName)) %>')
 export class <%= classify(entityName) %>Controller {

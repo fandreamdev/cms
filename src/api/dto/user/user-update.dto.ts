@@ -4,7 +4,7 @@ import { UserCreateDto } from './user-create.dto'
 import { IsOptional, IsString, MinLength } from 'class-validator'
 import { applyDecorators } from '@nestjs/common'
 import { i18nValidationMessage } from 'nestjs-i18n'
-import { EmptyStringToUndefined } from '../../shared/decorator/empty-string-to-undefined.decorator'
+import { EmptyStringToUndefined } from '../../../shared/decorator/empty-string-to-undefined.decorator'
 
 export class UserUpdateDto extends PartialType(UserCreateDto) {
   @IsString()

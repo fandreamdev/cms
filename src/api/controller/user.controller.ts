@@ -12,7 +12,7 @@ import {
 import { UserService } from '../../shared/services/user.service'
 import { UserCreateDto, UserUpdateDto } from '../dto'
 import { I18nValidationPipe } from 'nestjs-i18n'
-import { UserQueryDto } from '../dto/user-query.dto'
+import { UserQueryDto } from '../dto/user/user-query.dto'
 
 @Controller('api/users')
 export class UserController {

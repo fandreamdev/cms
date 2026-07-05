@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Rule,
   SchematicContext,
@@ -39,11 +42,8 @@ interface EntityMeta {
 
 export function crud(options: CrudOptions): Rule {
   return (tree: Tree, context: SchematicContext) => {
-    const entityName = strings.dasherize(options.name)
-    const entityPath = `/src/shared/entities/${entityName}.entity.ts`
-    if (!tree.exists(entityPath)) {
-      throw new Error(`Entity not found: ${entityPath}`)
-    }
+    const entityName = normalizeEntityName(options.name)
+    const entityPath = resolveEntityPath(tree, entityName)
 
     const entity = parseEntity(tree.readText(entityPath), entityPath)
     const templateSource = apply(url('./files'), [
@@ -81,7 +81,9 @@ export function crud(options: CrudOptions): Rule {
       updateSharedModule(entityName, entity.className),
       updateDtoIndex(entityName),
       () => {
-        context.logger.info(`Generated CRUD for ${strings.classify(entityName)}`)
+        context.logger.info(
+          `Generated CRUD for ${strings.classify(entityName)}`,
+        )
       },
     ])(tree, context)
   }
@@ -166,7 +168,11 @@ function updateApiModule(entityName: string): Rule {
 function updateSharedModule(entityName: string, entityClassName: string): Rule {
   return updateFile('/src/shared/shared.module.ts', (content) => {
     const serviceName = `${strings.classify(entityName)}Service`
-    let next = addImport(content, serviceName, `./services/${entityName}.service`)
+    let next = addImport(
+      content,
+      serviceName,
+      `./services/${entityName}.service`,
+    )
     next = addImport(next, entityClassName, `./entities/${entityName}.entity`)
     next = addTypeOrmFeature(next, entityClassName)
     next = addArrayItem(next, 'providers', serviceName)
@@ -177,13 +183,36 @@ function updateSharedModule(entityName: string, entityClassName: string): Rule {
 
 function updateDtoIndex(entityName: string): Rule {
   return updateFile('/src/api/dto/index.ts', (content) => {
-    let next = addExport(content, `./${entityName}-create.dto`)
-    next = addExport(next, `./${entityName}-update.dto`)
+    let next = addExport(content, `./${entityName}/${entityName}-create.dto`)
+    next = addExport(next, `./${entityName}/${entityName}-update.dto`)
     return next
   })
 }
 
-function updateFile(filePath: string, updater: (content: string) => string): Rule {
+function normalizeEntityName(name: string): string {
+  return strings.dasherize(name)
+}
+
+function resolveEntityPath(tree: Tree, entityName: string): string {
+  const candidates = [
+    entityName,
+    strings.dasherize(strings.camelize(entityName)),
+    strings.dasherize(strings.classify(entityName)),
+  ]
+    .filter((value, index, values) => values.indexOf(value) === index)
+    .map((value) => `/src/shared/entities/${value}.entity.ts`)
+
+  const entityPath = candidates.find((candidate) => tree.exists(candidate))
+  if (!entityPath) {
+    throw new Error(`Entity not found. Tried: ${candidates.join(', ')}`)
+  }
+  return entityPath
+}
+
+function updateFile(
+  filePath: string,
+  updater: (content: string) => string,
+): Rule {
   return (tree: Tree) => {
     if (!tree.exists(filePath)) return tree
     const content = tree.readText(filePath)
@@ -198,7 +227,9 @@ function renderCreateDtoImports(entity: EntityMeta): string {
 }
 
 function renderQueryDtoImports(entity: EntityMeta): string {
-  return collectQueryImports(entity.columns.filter((field) => !isSecretField(field)))
+  return collectQueryImports(
+    entity.columns.filter((field) => !isSecretField(field)),
+  )
 }
 
 function renderCreateDtoFields(entity: EntityMeta): string {
@@ -213,7 +244,10 @@ function renderQueryDtoFields(entity: EntityMeta): string {
 }
 
 function renderQueryInputs(entityName: string, entity: EntityMeta): string {
-  return entity.listFields.slice(0, 4).map((field) => renderQueryInput(entityName, field)).join('\n')
+  return entity.listFields
+    .slice(0, 4)
+    .map((field) => renderQueryInput(entityName, field))
+    .join('\n')
 }
 
 function renderTableHeaders(entityName: string, entity: EntityMeta): string {
@@ -223,7 +257,9 @@ function renderTableHeaders(entityName: string, entity: EntityMeta): string {
 }
 
 function renderTableCells(entity: EntityMeta): string {
-  return entity.listFields.map((field) => `        <td>${fieldValue(field)}</td>`).join('\n')
+  return entity.listFields
+    .map((field) => `        <td>${fieldValue(field)}</td>`)
+    .join('\n')
 }
 
 function renderFormInputs(entityName: string, entity: EntityMeta): string {
@@ -245,10 +281,15 @@ function renderDetailRows(entityName: string, entity: EntityMeta): string {
     .join('\n')
 }
 
-function renderI18nJson(entityName: string, entity: EntityMeta, useComments: boolean): string {
+function renderI18nJson(
+  entityName: string,
+  entity: EntityMeta,
+  useComments: boolean,
+): string {
   const labels: Record<string, string> = {}
   for (const field of entity.displayFields) {
-    labels[field.columnName] = useComments && field.comment ? field.comment : titleize(field.name)
+    labels[field.columnName] =
+      useComments && field.comment ? field.comment : titleize(field.name)
   }
   return JSON.stringify(
     {
@@ -279,7 +320,10 @@ function renderI18nJson(entityName: string, entity: EntityMeta, useComments: boo
   )
 }
 
-function renderStatusToggleScript(entityName: string, entity: EntityMeta): string {
+function renderStatusToggleScript(
+  entityName: string,
+  entity: EntityMeta,
+): string {
   if (!hasStatusField(entity)) return ''
   return `    $('.js-status-toggle').on('change', function () {
       var $input = $(this)
@@ -383,7 +427,7 @@ function collectDtoImports(fields: EntityField[]): string {
     needsType ? "import { Type } from 'class-transformer'" : '',
     `import { ${Array.from(validators).sort().join(', ')} } from 'class-validator'`,
     needsEmpty
-      ? "import { EmptyStringToUndefined } from '../../shared/decorator/empty-string-to-undefined.decorator'"
+      ? "import { EmptyStringToUndefined } from '../../../shared/decorator/empty-string-to-undefined.decorator'"
       : '',
   ]
     .filter(Boolean)
@@ -416,7 +460,7 @@ function collectQueryImports(fields: EntityField[]): string {
       : '',
     `import { ${Array.from(validators).sort().join(', ')} } from 'class-validator'`,
     needsEmpty
-      ? "import { EmptyStringToUndefined } from '../../shared/decorator/empty-string-to-undefined.decorator'"
+      ? "import { EmptyStringToUndefined } from '../../../shared/decorator/empty-string-to-undefined.decorator'"
       : '',
   ]
     .filter(Boolean)
@@ -486,7 +530,11 @@ function fieldValue(field: EntityField): string {
   return `{{this.${field.name}}}`
 }
 
-function detailValue(entityName: string, variableName: string, field: EntityField): string {
+function detailValue(
+  entityName: string,
+  variableName: string,
+  field: EntityField,
+): string {
   if (field.name === 'status') {
     return `{{#if (eq ${variableName}.status 0)}}<span class='badge bg-secondary'>{{t '${entityName}.status.inactive'}}</span>{{else}}<span class='badge bg-success'>{{t '${entityName}.status.active'}}</span>{{/if}}`
   }
@@ -497,13 +545,20 @@ function detailValue(entityName: string, variableName: string, field: EntityFiel
   return `{{${variableName}.${field.name}}}`
 }
 
-function addImport(content: string, identifier: string, modulePath: string): string {
-  if (content.includes(`import { ${identifier} } from '${modulePath}'`)) return content
+function addImport(
+  content: string,
+  identifier: string,
+  modulePath: string,
+): string {
+  if (content.includes(`import { ${identifier} } from '${modulePath}'`))
+    return content
   return `import { ${identifier} } from '${modulePath}'\n${content}`
 }
 
 function addArrayItem(content: string, property: string, item: string): string {
-  if (new RegExp(`${property}\\s*:\\s*\\[[^\\]]*\\b${item}\\b`, 's').test(content)) {
+  if (
+    new RegExp(`${property}\\s*:\\s*\\[[^\\]]*\\b${item}\\b`, 's').test(content)
+  ) {
     return content
   }
   return content.replace(
@@ -516,13 +571,21 @@ function addArrayItem(content: string, property: string, item: string): string {
 }
 
 function addTypeOrmFeature(content: string, item: string): string {
-  if (new RegExp(`TypeOrmModule\\.forFeature\\(\\[[^\\]]*\\b${item}\\b`, 's').test(content)) {
+  if (
+    new RegExp(
+      `TypeOrmModule\\.forFeature\\(\\[[^\\]]*\\b${item}\\b`,
+      's',
+    ).test(content)
+  ) {
     return content
   }
-  return content.replace(/TypeOrmModule\.forFeature\(\[([^\]]*)\]\)/s, (_match, body) => {
-    const trimmed = body.trim()
-    return `TypeOrmModule.forFeature([${trimmed ? `${trimmed}, ${item}` : item}])`
-  })
+  return content.replace(
+    /TypeOrmModule\.forFeature\(\[([^\]]*)\]\)/s,
+    (_match, body) => {
+      const trimmed = body.trim()
+      return `TypeOrmModule.forFeature([${trimmed ? `${trimmed}, ${item}` : item}])`
+    },
+  )
 }
 
 function addExport(content: string, modulePath: string): string {
@@ -550,9 +613,12 @@ function cleanOption(value?: string): string | undefined {
 }
 
 function getColumnDecorator(node: ts.PropertyDeclaration): string | undefined {
-  return ['PrimaryGeneratedColumn', 'CreateDateColumn', 'UpdateDateColumn', 'Column'].find((name) =>
-    hasDecorator(node, name),
-  )
+  return [
+    'PrimaryGeneratedColumn',
+    'CreateDateColumn',
+    'UpdateDateColumn',
+    'Column',
+  ].find((name) => hasDecorator(node, name))
 }
 
 function hasDecorator(node: ts.Node, name: string): boolean {
@@ -564,7 +630,11 @@ function hasDecorator(node: ts.Node, name: string): boolean {
   })
 }
 
-function getDecoratorText(node: ts.Node, name: string, sourceFile: ts.SourceFile): string {
+function getDecoratorText(
+  node: ts.Node,
+  name: string,
+  sourceFile: ts.SourceFile,
+): string {
   const decorator = getDecorators(node).find((candidate) => {
     const expression = candidate.expression
     return ts.isCallExpression(expression)
@@ -584,15 +654,25 @@ function visit(node: ts.Node, callback: (node: ts.Node) => void): void {
 }
 
 function isStringField(field: EntityField): boolean {
-  return field.type === 'string' || ['varchar', 'text', 'char'].includes(field.columnType || '')
+  return (
+    field.type === 'string' ||
+    ['varchar', 'text', 'char'].includes(field.columnType || '')
+  )
 }
 
 function isNumberField(field: EntityField): boolean {
   return (
     field.type === 'number' ||
-    ['int', 'integer', 'tinyint', 'smallint', 'bigint', 'decimal', 'float', 'double'].includes(
-      field.columnType || '',
-    )
+    [
+      'int',
+      'integer',
+      'tinyint',
+      'smallint',
+      'bigint',
+      'decimal',
+      'float',
+      'double',
+    ].includes(field.columnType || '')
   )
 }
 
@@ -601,11 +681,16 @@ function isBooleanField(field: EntityField): boolean {
 }
 
 function isDateField(field: EntityField): boolean {
-  return field.type === 'Date' || ['date', 'datetime', 'timestamp'].includes(field.columnType || '')
+  return (
+    field.type === 'Date' ||
+    ['date', 'datetime', 'timestamp'].includes(field.columnType || '')
+  )
 }
 
 function isSecretField(field: EntityField): boolean {
-  return ['password', 'token', 'secret'].some((part) => field.name.toLowerCase().includes(part))
+  return ['password', 'token', 'secret'].some((part) =>
+    field.name.toLowerCase().includes(part),
+  )
 }
 
 function inputType(field: EntityField): string {
@@ -621,7 +706,9 @@ function camelize(value: string): string {
 }
 
 function titleize(value: string): string {
-  return strings.classify(strings.dasherize(value)).replace(/([a-z])([A-Z])/g, '$1 $2')
+  return strings
+    .classify(strings.dasherize(value))
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
 }
 
 function snakeCase(value: string): string {

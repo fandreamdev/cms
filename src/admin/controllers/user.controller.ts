@@ -17,7 +17,7 @@ import { UserService } from '../../shared/services/user.service'
 import { UserCreateDto, UserUpdateDto } from '../../api/dto'
 import { AdminExceptionFilter } from '../filters/admin-exception.filter'
 import { hashPassword } from '../../shared/utils/pwd'
-import { UserQueryDto } from '../../api/dto/user-query.dto'
+import { UserQueryDto } from '../../api/dto/user/user-query.dto'
 import { buildPaginationView } from '../../shared/utils/pagination'
 
 @Controller('admin/users')

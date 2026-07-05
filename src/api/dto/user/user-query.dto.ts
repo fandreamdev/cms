@@ -1,7 +1,7 @@
 import { Transform } from 'class-transformer'
 import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator'
-import { EmptyStringToUndefined } from '../../shared/decorator/empty-string-to-undefined.decorator'
-import { PaginationDto } from './pagination.dto'
+import { EmptyStringToUndefined } from '../../../shared/decorator/empty-string-to-undefined.decorator'
+import { PaginationDto } from '../pagination.dto'
 
 export class UserQueryDto extends PaginationDto {
   @IsOptional()
