@@ -22,7 +22,10 @@ interface EntityField {
   name: string
   columnName: string
   type: string
+  typeIdentifier?: string
+  typeImportModulePath?: string
   columnType?: string
+  enumType?: string
   comment?: string
   nullable: boolean
   hasDefault: boolean
@@ -44,7 +47,11 @@ export function crud(options: CrudOptions): Rule {
     const entityDesc = options.desc
     const entityPath = resolveEntityPath(tree, entityName)
 
-    const entity = parseEntity(tree.readText(entityPath), entityPath)
+    const entity = parseEntity(
+      tree.readText(entityPath),
+      entityPath,
+      entityName,
+    )
     const templateSource = apply(url('./files'), [
       applyTemplates({
         ...strings,
@@ -89,7 +96,11 @@ export function crud(options: CrudOptions): Rule {
   }
 }
 
-function parseEntity(sourceText: string, entityPath: string): EntityMeta {
+function parseEntity(
+  sourceText: string,
+  entityPath: string,
+  entityName: string,
+): EntityMeta {
   const sourceFile = ts.createSourceFile(
     entityPath,
     sourceText,
@@ -108,6 +119,8 @@ function parseEntity(sourceText: string, entityPath: string): EntityMeta {
     throw new Error(`No @Entity class found in ${entityPath}`)
   }
 
+  const namedImports = collectNamedImports(sourceFile)
+  const dtoPath = `/src/api/dto/${entityName}/${entityName}-create.dto.ts`
   const fields: EntityField[] = []
   for (const member of entityClass.members) {
     if (!ts.isPropertyDeclaration(member) || !member.name) continue
@@ -117,11 +130,23 @@ function parseEntity(sourceText: string, entityPath: string): EntityMeta {
     const name = member.name.getText(sourceFile)
     const decoratorCall = getDecoratorCall(member, decoratorName, sourceFile)
     const options = parseColumnOptions(decoratorCall)
+    const typeIdentifier = getTypeIdentifier(member.type)
+    const typeImportPath = typeIdentifier
+      ? namedImports.get(typeIdentifier)
+      : undefined
     fields.push({
       name,
       columnName: options.name || snakeCase(name),
       type: member.type?.getText(sourceFile) || 'string',
+      typeIdentifier,
+      typeImportModulePath: typeImportPath
+        ? relativeImportPath(
+            dtoPath,
+            resolveImportPath(entityPath, typeImportPath),
+          )
+        : undefined,
       columnType: options.type,
+      enumType: options.enumType,
       comment: options.comment,
       nullable: options.nullable,
       hasDefault: options.hasDefault,
@@ -424,7 +449,10 @@ function fuzzyFields(entity: EntityMeta): string {
 function renderDtoField(field: EntityField): string {
   const optional = field.nullable || field.hasDefault
   const decorators = optional ? ['@IsOptional()'] : []
-  if (isNumberField(field)) {
+  if (isEnumField(field)) {
+    if (optional) decorators.push('@EmptyStringToUndefined()')
+    decorators.push(`@IsEnum(${enumIdentifier(field)})`)
+  } else if (isNumberField(field)) {
     decorators.push('@Type(() => Number)', '@IsNumber()')
   } else if (isBooleanField(field)) {
     decorators.push('@Type(() => Boolean)', '@IsBoolean()')
@@ -439,7 +467,12 @@ function renderDtoField(field: EntityField): string {
 
 function renderQueryField(field: EntityField): string {
   const decorators = ['@IsOptional()']
-  if (isNumberField(field)) {
+  if (isEnumField(field)) {
+    decorators.push(
+      '@EmptyStringToUndefined()',
+      `@IsEnum(${enumIdentifier(field)})`,
+    )
+  } else if (isNumberField(field)) {
     decorators.push('@Type(() => Number)', '@IsNumber()')
   } else if (isBooleanField(field)) {
     decorators.push(
@@ -464,7 +497,10 @@ function collectDtoImports(fields: EntityField[]): string {
   let needsEmpty = false
   for (const field of fields) {
     if (field.nullable || field.hasDefault) validators.add('IsOptional')
-    if (isNumberField(field)) {
+    if (isEnumField(field)) {
+      validators.add('IsEnum')
+      needsEmpty = needsEmpty || field.nullable || field.hasDefault
+    } else if (isNumberField(field)) {
       validators.add('IsNumber')
       needsType = true
     } else if (isBooleanField(field)) {
@@ -484,6 +520,7 @@ function collectDtoImports(fields: EntityField[]): string {
     needsEmpty
       ? "import { EmptyStringToUndefined } from '../../../shared/decorator/empty-string-to-undefined.decorator'"
       : '',
+    renderFieldTypeImports(fields),
   ]
     .filter(Boolean)
     .join('\n')
@@ -495,7 +532,10 @@ function collectQueryImports(fields: EntityField[]): string {
   let needsTransform = false
   let needsEmpty = false
   for (const field of fields) {
-    if (isNumberField(field)) {
+    if (isEnumField(field)) {
+      validators.add('IsEnum')
+      needsEmpty = true
+    } else if (isNumberField(field)) {
       validators.add('IsNumber')
       needsType = true
     } else if (isBooleanField(field)) {
@@ -517,9 +557,35 @@ function collectQueryImports(fields: EntityField[]): string {
     needsEmpty
       ? "import { EmptyStringToUndefined } from '../../../shared/decorator/empty-string-to-undefined.decorator'"
       : '',
+    renderFieldTypeImports(fields),
   ]
     .filter(Boolean)
     .join('\n')
+}
+
+function renderFieldTypeImports(fields: EntityField[]): string {
+  const imports = new Map<string, Set<string>>()
+
+  for (const field of fields) {
+    if (!isEnumField(field)) continue
+    if (!field.typeImportModulePath || !field.typeIdentifier) continue
+
+    const identifiers = imports.get(field.typeImportModulePath) || new Set()
+    identifiers.add(field.typeIdentifier)
+    imports.set(field.typeImportModulePath, identifiers)
+  }
+
+  return Array.from(imports.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([modulePath, identifiers]) => {
+      const names = Array.from(identifiers).sort().join(', ')
+      return `import { ${names} } from '${modulePath}'`
+    })
+    .join('\n')
+}
+
+function enumIdentifier(field: EntityField): string {
+  return field.enumType || field.typeIdentifier || field.type
 }
 
 function renderQueryInput(entityName: string, field: EntityField): string {
@@ -688,6 +754,25 @@ function createSourceFile(filePath: string, content: string): ts.SourceFile {
   return ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true)
 }
 
+function collectNamedImports(sourceFile: ts.SourceFile): Map<string, string> {
+  const imports = new Map<string, string>()
+
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement)) continue
+    const modulePath = getImportModulePath(statement, sourceFile)
+    if (!modulePath) continue
+
+    const namedBindings = statement.importClause?.namedBindings
+    if (!namedBindings || !ts.isNamedImports(namedBindings)) continue
+
+    for (const element of namedBindings.elements) {
+      imports.set(element.name.text, modulePath)
+    }
+  }
+
+  return imports
+}
+
 function getImportModulePath(
   statement: ts.ImportDeclaration,
   sourceFile: ts.SourceFile,
@@ -709,6 +794,70 @@ function hasNamedImport(
     ts.isNamedImports(namedBindings) &&
     namedBindings.elements.some((element) => element.name.text === identifier),
   )
+}
+
+function getTypeIdentifier(typeNode?: ts.TypeNode): string | undefined {
+  if (!typeNode) return undefined
+
+  if (ts.isTypeReferenceNode(typeNode) && ts.isIdentifier(typeNode.typeName)) {
+    return typeNode.typeName.text
+  }
+
+  if (ts.isArrayTypeNode(typeNode)) {
+    return getTypeIdentifier(typeNode.elementType)
+  }
+
+  if (ts.isUnionTypeNode(typeNode)) {
+    return typeNode.types
+      .map((candidate) => getTypeIdentifier(candidate))
+      .find(Boolean)
+  }
+
+  return undefined
+}
+
+function resolveImportPath(fromFilePath: string, modulePath: string): string {
+  if (!modulePath.startsWith('.')) return modulePath
+
+  return normalizePath(`${fromFilePath.replace(/\/[^/]+$/, '')}/${modulePath}`)
+}
+
+function relativeImportPath(
+  fromFilePath: string,
+  toModulePath: string,
+): string {
+  if (!toModulePath.startsWith('/')) return toModulePath
+
+  const fromParts = fromFilePath
+    .replace(/\/[^/]+$/, '')
+    .split('/')
+    .filter(Boolean)
+  const toParts = toModulePath.split('/').filter(Boolean)
+
+  while (fromParts.length && toParts.length && fromParts[0] === toParts[0]) {
+    fromParts.shift()
+    toParts.shift()
+  }
+
+  const relativeParts = [...fromParts.map(() => '..'), ...toParts]
+  const relativePath = relativeParts.join('/')
+  return relativePath.startsWith('.') ? relativePath : `./${relativePath}`
+}
+
+function normalizePath(value: string): string {
+  const isAbsolute = value.startsWith('/')
+  const parts: string[] = []
+
+  for (const part of value.split('/')) {
+    if (!part || part === '.') continue
+    if (part === '..') {
+      parts.pop()
+      continue
+    }
+    parts.push(part)
+  }
+
+  return `${isAbsolute ? '/' : ''}${parts.join('/')}`
 }
 
 function getLineEnd(content: string, position: number): number {
@@ -802,6 +951,7 @@ function parseColumnOptions(decoratorCall?: ts.CallExpression) {
   const options: {
     type?: string
     name?: string
+    enumType?: string
     comment?: string
     nullable: boolean
     hasDefault: boolean
@@ -832,6 +982,7 @@ function parseColumnOptions(decoratorCall?: ts.CallExpression) {
       const value = getLiteralOptionValue(property.initializer)
       if (propertyName === 'type') options.type = value
       if (propertyName === 'name') options.name = value
+      if (propertyName === 'enum') options.enumType = value
       if (propertyName === 'comment') options.comment = value
       if (propertyName === 'nullable') options.nullable = value === 'true'
     }
@@ -898,6 +1049,10 @@ function isStringField(field: EntityField): boolean {
     field.type === 'string' ||
     ['varchar', 'text', 'char'].includes(field.columnType || '')
   )
+}
+
+function isEnumField(field: EntityField): boolean {
+  return field.columnType === 'enum' || Boolean(field.enumType)
 }
 
 function isNumberField(field: EntityField): boolean {
