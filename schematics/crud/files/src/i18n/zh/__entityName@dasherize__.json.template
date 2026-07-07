@@ -1,1 +1,1 @@
-<%= renderI18nJson(dasherize(entityName), entity, true) %>
+<%= renderI18nJson(dasherize(entityName), entity, true, entityDesc) %>

@@ -15,6 +15,7 @@ import { plural } from 'pluralize'
 
 interface CrudOptions {
   name: string
+  desc: string
 }
 
 interface EntityField {
@@ -40,6 +41,7 @@ interface EntityMeta {
 export function crud(options: CrudOptions): Rule {
   return (tree: Tree, context: SchematicContext) => {
     const entityName = normalizeEntityName(options.name)
+    const entityDesc = options.desc
     const entityPath = resolveEntityPath(tree, entityName)
 
     const entity = parseEntity(tree.readText(entityPath), entityPath)
@@ -48,6 +50,7 @@ export function crud(options: CrudOptions): Rule {
         ...strings,
         entity,
         entityName,
+        entityDesc,
         plural,
         camelize,
         titleize,
@@ -294,7 +297,9 @@ function renderI18nJson(
   entityName: string,
   entity: EntityMeta,
   useComments: boolean,
+  entityDesc: string,
 ): string {
+  console.log(entityName, entityDesc)
   const labels: Record<string, string> = {}
   for (const field of entity.displayFields) {
     labels[field.columnName] =
@@ -303,11 +308,11 @@ function renderI18nJson(
   const title = titleize(entityName)
   const messages = useComments
     ? {
-        list_title: `${title}列表`,
-        form_title_create: `创建${title}`,
-        form_title_update: `编辑${title}`,
-        detail_title: `${title}详情`,
-        add: `添加${title}`,
+        list_title: `${entityDesc}列表`,
+        form_title_create: `创建${entityDesc}`,
+        form_title_update: `编辑${entityDesc}`,
+        detail_title: `${entityDesc}详情`,
+        add: `添加${entityDesc}`,
         search: '查询',
         export: '导出',
         view: '查看',
