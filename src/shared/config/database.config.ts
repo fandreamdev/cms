@@ -28,9 +28,9 @@ export const databaseConfig = registerAs(DATABASE_KEY, () => ({
 export type DatabaseConfigType = ConfigType<typeof databaseConfig>
 
 export const databaseSchema = {
-  [DATABASE_TYPE]: Joi.string().required(),
-  [DATABASE_HOST]: Joi.string().required(),
-  [DATABASE_PORT]: Joi.number().required(),
+  [DATABASE_TYPE]: Joi.string().default('mysql'),
+  [DATABASE_HOST]: Joi.string().default('localhost'),
+  [DATABASE_PORT]: Joi.number().default(3306),
   [DATABASE_USER]: Joi.string().required(),
   [DATABASE_PASSWORD]: Joi.string().required(),
   [DATABASE_DB]: Joi.string().required(),

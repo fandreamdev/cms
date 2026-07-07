@@ -1,0 +1,37 @@
+{
+  "list_title": "资源列表",
+  "form_title_create": "创建资源",
+  "form_title_update": "编辑资源",
+  "detail_title": "资源详情",
+  "add": "添加资源",
+  "search": "查询",
+  "export": "导出",
+  "view": "查看",
+  "edit": "编辑",
+  "delete": "删除",
+  "back": "返回",
+  "actions": "操作",
+  "total": "共",
+  "page": "第",
+  "prev": "上一页",
+  "next": "下一页",
+  "delete_confirm": "确定要删除这条记录吗？",
+  "delete_failed": "删除失败",
+  "status": {
+    "placeholder": "请选择",
+    "inactive": "未激活",
+    "active": "激活"
+  },
+  "boolean": {
+    "yes": "是",
+    "no": "否"
+  },
+  "field": {
+    "id": "唯一标识",
+    "type": "资源类型",
+    "url": "url地址",
+    "description": "描述",
+    "created_at": "创建时间",
+    "updated_at": "更新时间"
+  }
+}

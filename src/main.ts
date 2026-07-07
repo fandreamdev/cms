@@ -76,7 +76,7 @@ async function bootstrap() {
         eq: (a: unknown, b: unknown) => a === b,
         isPermissionMenuOpen: (currentPath: unknown) =>
           typeof currentPath === 'string' &&
-          ['/admin/users', '/admin/roles'].some((path) =>
+          ['/admin/users', '/admin/roles', '/admin/accesses'].some((path) =>
             currentPath.startsWith(path),
           ),
         formatDate,

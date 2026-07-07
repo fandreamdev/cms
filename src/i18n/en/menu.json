@@ -1,5 +1,6 @@
 {
   "permission": "Permission",
   "user_management": "User Management",
-  "role_management": "Role Management"
+  "role_management": "Role Management",
+  "accesses_management": "Accesses Management"
 }

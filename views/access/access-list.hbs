@@ -1,0 +1,100 @@
+<h1>{{t 'access.list_title'}}</h1>
+<form class='d-flex flex-wrap align-items-center gap-4 mb-4 mt-4'>
+  <div class='d-flex align-items-center field-item'>
+    <label class='me-2 text-nowrap' for='type'>{{t 'access.field.type'}}</label>
+    <input type='text' class='form-control' id='type' name='type' value='{{query.type}}' />
+  </div>
+  <div class='d-flex align-items-center field-item'>
+    <label class='me-2 text-nowrap' for='url'>{{t 'access.field.url'}}</label>
+    <input type='text' class='form-control' id='url' name='url' value='{{query.url}}' />
+  </div>
+  <div class='d-flex align-items-center field-item'>
+    <label class='me-2 text-nowrap' for='description'>{{t 'access.field.description'}}</label>
+    <input type='text' class='form-control' id='description' name='description' value='{{query.description}}' />
+  </div>
+  <div class='d-flex justify-content-between w-100'>
+    <div class='d-flex gap-2'>
+      <button type='submit' class='btn btn-primary btn-eq'>{{t 'access.search'}}</button>
+      <button type='button' class='btn btn-secondary btn-eq'>{{t 'access.export'}}</button>
+    </div>
+    <a href='/admin/accesses/create' class='btn btn-success btn-eq'>{{t 'access.add'}}</a>
+  </div>
+</form>
+
+<table class='table align-middle'>
+  <thead>
+    <tr>
+      <th>{{t 'access.field.type'}}</th>
+      <th>{{t 'access.field.url'}}</th>
+      <th>{{t 'access.field.description'}}</th>
+      <th>{{t 'access.actions'}}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each accesses}}
+      <tr data-id='{{this.id}}'>
+        <td>{{this.type}}</td>
+        <td>{{this.url}}</td>
+        <td>{{this.description}}</td>
+        <td>
+          <a href='/admin/accesses/{{this.id}}/detail' class='btn btn-info'>{{t 'access.view'}}</a>
+          <a href='/admin/accesses/{{this.id}}/edit' class='btn btn-success'>{{t 'access.edit'}}</a>
+          <button type='button' class='btn btn-danger js-delete'>{{t 'access.delete'}}</button>
+        </td>
+      </tr>
+    {{/each}}
+  </tbody>
+</table>
+
+{{#if pagination.totalPages}}
+  <nav class='d-flex justify-content-between align-items-center'>
+    <span class='text-muted small'>{{t 'access.total'}} {{pagination.total}}, {{t 'access.page'}} {{pagination.page}} / {{pagination.totalPages}}</span>
+    <ul class='pagination mb-0'>
+      <li class='page-item {{#unless pagination.hasPrev}}disabled{{/unless}}'>
+        <a class='page-link' href='?page={{pagination.prevPage}}&pageSize={{pagination.pageSize}}{{#if pagination.queryString}}&{{pagination.queryString}}{{/if}}'>{{t 'access.prev'}}</a>
+      </li>
+      {{#each pagination.items}}
+        <li class='page-item {{#if this.active}}active{{/if}}'>
+          <a class='page-link' href='?page={{this.page}}&pageSize={{../pagination.pageSize}}{{#if ../pagination.queryString}}&{{../pagination.queryString}}{{/if}}'>{{this.page}}</a>
+        </li>
+      {{/each}}
+      <li class='page-item {{#unless pagination.hasNext}}disabled{{/unless}}'>
+        <a class='page-link' href='?page={{pagination.nextPage}}&pageSize={{pagination.pageSize}}{{#if pagination.queryString}}&{{pagination.queryString}}{{/if}}'>{{t 'access.next'}}</a>
+      </li>
+    </ul>
+  </nav>
+{{/if}}
+
+<style>
+  .btn-eq {
+    min-width: 88px;
+  }
+
+  .field-item {
+    flex: 1 1 calc(25% - 0.75rem);
+    min-width: 240px;
+  }
+</style>
+
+<script>
+  $(function () {
+
+    $('.js-delete').on('click', function () {
+      var $row = $(this).closest('tr')
+      var id = $row.data('id')
+      if (!confirm("{{t 'access.delete_confirm'}}")) {
+        return
+      }
+      $.ajax({
+        url: '/admin/accesses/' + id,
+        method: 'DELETE',
+      })
+        .done(function () {
+          window.location.reload()
+        })
+        .fail(function () {
+          alert("{{t 'access.delete_failed'}}")
+        })
+    })
+  })
+</script>

@@ -5,7 +5,7 @@ export function env<T>(
 ): T | undefined
 export function env<T = string>(key: string, transfer?: (source: string) => T) {
   const source = process.env[key]
-  if (source === undefined || source === null) {
+  if (source === undefined || source === null || source === '') {
     return source
   }
   if (transfer) {

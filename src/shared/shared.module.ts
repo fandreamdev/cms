@@ -11,6 +11,8 @@ import { User } from './entities/user.entity'
 import { IsUserAlreadyExistConstraint } from './validators/is-username-unique.validator'
 import { RoleService } from './services/role.service'
 import { Role } from './entities/role.entity'
+import { AccessService } from './services/access.service'
+import { Access } from './entities/access.entity'
 
 @Global()
 @Module({
@@ -29,9 +31,14 @@ import { Role } from './entities/role.entity'
         return databaseConfig
       },
     }),
-    TypeOrmModule.forFeature([User, Role]),
+    TypeOrmModule.forFeature([User, Role, Access]),
   ],
-  providers: [UserService, IsUserAlreadyExistConstraint, RoleService],
-  exports: [UserService, RoleService],
+  providers: [
+    UserService,
+    IsUserAlreadyExistConstraint,
+    RoleService,
+    AccessService,
+  ],
+  exports: [UserService, RoleService, AccessService],
 })
 export class SharedModule {}

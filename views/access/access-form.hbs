@@ -1,0 +1,19 @@
+<h1>{{#if access.id}}{{t 'access.form_title_update'}}{{else}}{{t 'access.form_title_create'}}{{/if}}</h1>
+<form
+  method='post'
+  action='{{#if access.id}}/admin/accesses/{{access.id}}?_method=PUT{{else}}/admin/accesses{{/if}}'
+>
+  <div class='mb-3'>
+    <label for='type' class='form-label'>{{t 'access.field.type'}}</label>
+    <input type='text' name='type' class='form-control' id='type' value='{{access.type}}' />
+  </div>
+  <div class='mb-3'>
+    <label for='url' class='form-label'>{{t 'access.field.url'}}</label>
+    <input type='text' name='url' class='form-control' id='url' value='{{access.url}}' />
+  </div>
+  <div class='mb-3'>
+    <label for='description' class='form-label'>{{t 'access.field.description'}}</label>
+    <input type='text' name='description' class='form-control' id='description' value='{{access.description}}' />
+  </div>
+  <button type='submit' class='btn btn-primary'>{{t 'common.save'}}</button>
+</form>
