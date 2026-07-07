@@ -10,7 +10,7 @@
     "build": "nest build",
     "schematics:build": "tsc -p schematics/tsconfig.json",
     "pregenerate:crud": "npm run schematics:build",
-    "generate:crud": "schematics .:crud --no-dry-run --name=%npm_config_name% --desc=%npm_config_desc%",
+    "generate:crud": "schematics .:crud --no-dry-run --name=%npm_config_name%",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
