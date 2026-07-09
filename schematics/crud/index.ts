@@ -66,14 +66,7 @@ export function crud(options: CrudOptions): Rule {
         renderQueryDtoFields,
         renderCreateDtoImports,
         renderQueryDtoImports,
-        renderQueryInputs,
-        renderTableHeaders,
-        renderTableCells,
-        renderFormInputs,
-        renderDetailRows,
         renderI18nJson,
-        renderStatusToggleScript,
-        hasStatusField,
         hasDefaultOrder,
         defaultOrderField,
         fuzzyFields,
@@ -83,7 +76,6 @@ export function crud(options: CrudOptions): Rule {
 
     return chain([
       mergeWith(templateSource),
-      updateAdminModule(entityName),
       updateApiModule(entityName),
       updateSharedModule(entityName, entity.className),
       updateDtoIndex(entityName),
@@ -166,18 +158,6 @@ function parseEntity(
     displayFields: fields.filter((field) => !isSecretField(field)),
     listFields: columns.filter((field) => !isSecretField(field)).slice(0, 5),
   }
-}
-
-function updateAdminModule(entityName: string): Rule {
-  return updateFile('/src/admin/admin.module.ts', (content, filePath) => {
-    const className = `${strings.classify(entityName)}Controller`
-    return addImport(
-      addArrayItem(content, filePath, 'controllers', className),
-      filePath,
-      className,
-      `./controllers/${entityName}.controller`,
-    )
-  })
 }
 
 function updateApiModule(entityName: string): Rule {
@@ -280,44 +260,6 @@ function renderQueryDtoFields(entity: EntityMeta): string {
     .join('\n\n')
 }
 
-function renderQueryInputs(entityName: string, entity: EntityMeta): string {
-  return entity.listFields
-    .slice(0, 4)
-    .map((field) => renderQueryInput(entityName, field))
-    .join('\n')
-}
-
-function renderTableHeaders(entityName: string, entity: EntityMeta): string {
-  return entity.listFields
-    .map((field) => `      <th>${fieldLabel(entityName, field)}</th>`)
-    .join('\n')
-}
-
-function renderTableCells(entity: EntityMeta): string {
-  return entity.listFields
-    .map((field) => `        <td>${fieldValue(field)}</td>`)
-    .join('\n')
-}
-
-function renderFormInputs(entityName: string, entity: EntityMeta): string {
-  return entity.columns
-    .filter((field) => !field.primary)
-    .map((field) => renderFormInput(entityName, field))
-    .join('\n')
-}
-
-function renderDetailRows(entityName: string, entity: EntityMeta): string {
-  const variableName = camelize(entityName)
-  return entity.displayFields
-    .map(
-      (field) => `    <tr>
-      <th class='table-light text-nowrap'>${fieldLabel(entityName, field)}</th>
-      <td>${detailValue(entityName, variableName, field)}</td>
-    </tr>`,
-    )
-    .join('\n')
-}
-
 function renderI18nJson(
   entityName: string,
   entity: EntityMeta,
@@ -398,37 +340,6 @@ function renderI18nJson(
     null,
     2,
   )
-}
-
-function renderStatusToggleScript(
-  entityName: string,
-  entity: EntityMeta,
-): string {
-  if (!hasStatusField(entity)) return ''
-  return `    $('.js-status-toggle').on('change', function () {
-      var $input = $(this)
-      var id = $input.closest('tr').data('id')
-      $input.prop('disabled', true)
-      $.ajax({
-        url: '/admin/${plural(entityName)}' + '/' + id + '/status',
-        method: 'PUT',
-      })
-        .done(function (res) {
-          $input.prop('checked', res.status === 1)
-        })
-        .fail(function () {
-          $input.prop('checked', !$input.prop('checked'))
-          alert('Status update failed')
-        })
-        .always(function () {
-          $input.prop('disabled', false)
-        })
-    })
-`
-}
-
-function hasStatusField(entity: EntityMeta): boolean {
-  return entity.columns.some((field) => field.name === 'status')
 }
 
 function hasDefaultOrder(entity: EntityMeta): boolean {
@@ -588,82 +499,8 @@ function enumIdentifier(field: EntityField): string {
   return field.enumType || field.typeIdentifier || field.type
 }
 
-function renderQueryInput(entityName: string, field: EntityField): string {
-  if (field.name === 'status') {
-    return `  <div class='d-flex align-items-center field-item'>
-    <label class='me-2 text-nowrap' for='status'>${fieldLabel(entityName, field)}</label>
-    <select class='form-select' id='status' name='status' aria-label='status'>
-      <option value=''>{{t '${entityName}.status.placeholder'}}</option>
-      <option value='0' {{#if (eq query.status 0)}}selected{{/if}}>{{t '${entityName}.status.inactive'}}</option>
-      <option value='1' {{#if (eq query.status 1)}}selected{{/if}}>{{t '${entityName}.status.active'}}</option>
-    </select>
-  </div>`
-  }
-  return `  <div class='d-flex align-items-center field-item'>
-    <label class='me-2 text-nowrap' for='${field.name}'>${fieldLabel(entityName, field)}</label>
-    <input type='${inputType(field)}' class='form-control' id='${field.name}' name='${field.name}' value='{{query.${field.name}}}' />
-  </div>`
-}
-
-function renderFormInput(entityName: string, field: EntityField): string {
-  const variableName = camelize(entityName)
-  if (field.name === 'status') {
-    return `  <div class='mb-3'>
-    <label for='status' class='form-label'>${fieldLabel(entityName, field)}</label>
-    <select class='form-select' id='status' name='status' aria-label='status'>
-      <option value=''>{{t '${entityName}.status.placeholder'}}</option>
-      <option value='0' {{#if (eq ${variableName}.status 0)}}selected{{/if}}>{{t '${entityName}.status.inactive'}}</option>
-      <option value='1' {{#if (eq ${variableName}.status 1)}}selected{{/if}}>{{t '${entityName}.status.active'}}</option>
-    </select>
-  </div>`
-  }
-  if (isBooleanField(field)) {
-    return `  <div class='mb-3'>
-    <label for='${field.name}' class='form-label'>${fieldLabel(entityName, field)}</label>
-    <select class='form-select' id='${field.name}' name='${field.name}' aria-label='${field.name}'>
-      <option value=''>{{t '${entityName}.status.placeholder'}}</option>
-      <option value='true' {{#if ${variableName}.${field.name}}}selected{{/if}}>{{t '${entityName}.boolean.yes'}}</option>
-      <option value='false' {{#unless ${variableName}.${field.name}}}selected{{/unless}}>{{t '${entityName}.boolean.no'}}</option>
-    </select>
-  </div>`
-  }
-  return `  <div class='mb-3'>
-    <label for='${field.name}' class='form-label'>${fieldLabel(entityName, field)}</label>
-    <input type='${inputType(field)}' name='${field.name}' class='form-control' id='${field.name}' value='{{${variableName}.${field.name}}}' />
-  </div>`
-}
-
-function fieldLabel(entityName: string, field: EntityField): string {
-  return `{{t '${entityName}.field.${field.columnName}'}}`
-}
-
 function fieldLabelKey(field: EntityField): string {
   return field.columnName
-}
-
-function fieldValue(field: EntityField): string {
-  if (field.name === 'status') {
-    return `<div class='form-check form-switch m-0 ps-0 d-flex justify-content-center align-items-center'>
-            <input type='checkbox' class='form-check-input m-0 js-status-toggle' role='switch' {{#unless (eq this.status 0)}}checked{{/unless}} />
-          </div>`
-  }
-  if (isDateField(field)) return `{{formatDate this.${field.name}}}`
-  return `{{this.${field.name}}}`
-}
-
-function detailValue(
-  entityName: string,
-  variableName: string,
-  field: EntityField,
-): string {
-  if (field.name === 'status') {
-    return `{{#if (eq ${variableName}.status 0)}}<span class='badge bg-secondary'>{{t '${entityName}.status.inactive'}}</span>{{else}}<span class='badge bg-success'>{{t '${entityName}.status.active'}}</span>{{/if}}`
-  }
-  if (isBooleanField(field)) {
-    return `{{#if ${variableName}.${field.name}}}{{t '${entityName}.boolean.yes'}}{{else}}{{t '${entityName}.boolean.no'}}{{/if}}`
-  }
-  if (isDateField(field)) return `{{formatDate ${variableName}.${field.name}}}`
-  return `{{${variableName}.${field.name}}}`
 }
 
 function addImport(
@@ -1086,14 +923,6 @@ function isSecretField(field: EntityField): boolean {
   return ['password', 'token', 'secret'].some((part) =>
     field.name.toLowerCase().includes(part),
   )
-}
-
-function inputType(field: EntityField): string {
-  if (isNumberField(field)) return 'number'
-  if (isDateField(field)) return 'datetime-local'
-  if (field.name.toLowerCase().includes('email')) return 'email'
-  if (field.name.toLowerCase().includes('password')) return 'password'
-  return 'text'
 }
 
 function camelize(value: string): string {

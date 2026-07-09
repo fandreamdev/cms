@@ -10,7 +10,7 @@ export const I18N_VIEW_ENGINE = 'I18N_VIEW_ENGINE'
 export const i18nConfig = registerAs(I18N_KEY, () => ({
   fallbackLanguage: envString(I18N_FALLBACK_LANGUAGE, 'zh'),
   logging: envBoolean(I18N_LOGGING),
-  viewEngine: envString(I18N_VIEW_ENGINE, 'hbs') as I18nViewEngine,
+  viewEngine: envString(I18N_VIEW_ENGINE) as I18nViewEngine | undefined,
 }))
 
 export type I18nConfigType = ConfigType<typeof i18nConfig>

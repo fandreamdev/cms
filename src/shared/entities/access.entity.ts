@@ -3,6 +3,7 @@ import {
   CreateDateColumn,
   Entity,
   PrimaryGeneratedColumn,
+  RelationId,
   Tree,
   TreeChildren,
   TreeParent,
@@ -31,7 +32,10 @@ export class Access {
   children!: Access[]
 
   @TreeParent()
-  parent!: Access
+  parent!: Access | null
+
+  @RelationId((access: Access) => access.parent)
+  parentId!: number | null
 
   @CreateDateColumn({
     name: 'created_at',
