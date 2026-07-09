@@ -1,22 +1,12 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common'
+import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { FindOptionsOrder, TreeRepository } from 'typeorm'
 import { Access } from '../entities/access.entity'
 import { BaseService } from './base.service'
 import { PaginatedResult } from './base.service'
-import { AccessType } from '../enum/access.enum'
-
-type AccessPayload = {
-  type?: AccessType
-  url?: string
-  description?: string
-  parentId?: number | null
-}
+import { AccessParentResolver } from './access/access-parent.resolver'
+import { AccessPayload } from './access/access-payload'
+import { stripParentRelations } from './access/access-tree-response'
 
 @Injectable()
 export class AccessService extends BaseService<Access> {
@@ -26,6 +16,7 @@ export class AccessService extends BaseService<Access> {
 
   constructor(
     @InjectRepository(Access) protected repository: TreeRepository<Access>,
+    private readonly parentResolver: AccessParentResolver,
   ) {
     super(repository)
   }
@@ -34,7 +25,7 @@ export class AccessService extends BaseService<Access> {
     const tree = await this.repository.findTrees({
       relations: ['parent', 'children'],
     })
-    return this.withoutParentRelation(tree)
+    return stripParentRelations(tree)
   }
 
   async findOneById(id: number): Promise<Access | null> {
@@ -46,7 +37,7 @@ export class AccessService extends BaseService<Access> {
   }
 
   async create(createDto: AccessPayload): Promise<Access> {
-    const parent = await this.resolveParent(createDto.parentId)
+    const parent = await this.parentResolver.resolve(createDto.parentId)
     const entity = this.repository.create({
       type: createDto.type,
       url: createDto.url,
@@ -70,7 +61,7 @@ export class AccessService extends BaseService<Access> {
     }
 
     if (updateDto.parentId !== undefined) {
-      access.parent = await this.resolveParent(updateDto.parentId, id)
+      access.parent = await this.parentResolver.resolve(updateDto.parentId, id)
     }
     if (updateDto.type !== undefined) {
       access.type = updateDto.type
@@ -121,45 +112,5 @@ export class AccessService extends BaseService<Access> {
       ...item,
       parentId: parentIdMap.get(item.id) ?? null,
     }))
-  }
-
-  private withoutParentRelation(list: Access[]): Access[] {
-    return list.map((item) => {
-      const normalized = {
-        ...item,
-        children: this.withoutParentRelation(item.children ?? []),
-      }
-      normalized.parent = undefined as unknown as null
-      return normalized
-    })
-  }
-
-  private async resolveParent(
-    parentId: number | null | undefined,
-    currentId?: number,
-  ): Promise<Access | null> {
-    if (parentId === undefined || parentId === null) return null
-    if (parentId === currentId) {
-      throw new BadRequestException('Parent access cannot be itself')
-    }
-
-    const parent = await this.repository.findOne({ where: { id: parentId } })
-    if (!parent) {
-      throw new NotFoundException('Parent access not found')
-    }
-
-    if (currentId) {
-      const current = await this.repository.findOne({
-        where: { id: currentId },
-      })
-      if (current) {
-        const descendants = await this.repository.findDescendants(current)
-        if (descendants.some((item) => item.id === parentId)) {
-          throw new BadRequestException('Parent access cannot be a descendant')
-        }
-      }
-    }
-
-    return parent
   }
 }

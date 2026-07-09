@@ -1,31 +1,21 @@
 import {
   Body,
-  Controller,
   Delete,
   Get,
-  NotFoundException,
   Param,
   ParseIntPipe,
   Post,
   Put,
   Query,
-  UseFilters,
-  UseInterceptors,
 } from '@nestjs/common'
 import { I18nValidationPipe } from 'nestjs-i18n'
+import { Access } from '../../shared/entities/access.entity'
 import { AccessService } from '../../shared/services/access.service'
+import { ApiResourceController, ensureFound, PaginatedData } from '../common'
 import { AccessCreateDto, AccessUpdateDto } from '../dto'
 import { AccessQueryDto } from '../dto/access/access-query.dto'
-import {
-  ApiExceptionFilter,
-  PaginatedData,
-  TransformInterceptor,
-} from '../common'
-import { Access } from '../../shared/entities/access.entity'
 
-@Controller('api/accesses')
-@UseInterceptors(TransformInterceptor)
-@UseFilters(ApiExceptionFilter)
+@ApiResourceController('api/accesses')
 export class AccessController {
   constructor(private readonly accessService: AccessService) {}
 
@@ -43,11 +33,7 @@ export class AccessController {
 
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<Access> {
-    const access = await this.accessService.findOneById(id)
-    if (!access) {
-      throw new NotFoundException('Access not found')
-    }
-    return access
+    return this.ensureExists(id)
   }
 
   @Post()
@@ -76,9 +62,6 @@ export class AccessController {
 
   private async ensureExists(id: number): Promise<Access> {
     const access = await this.accessService.findOneById(id)
-    if (!access) {
-      throw new NotFoundException('Access not found')
-    }
-    return access
+    return ensureFound(access, 'Access not found')
   }
 }

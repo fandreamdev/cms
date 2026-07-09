@@ -1,3 +1,5 @@
 export * from './api-response'
 export * from './transform.interceptor'
 export * from './api-exception.filter'
+export * from './api-resource-controller.decorator'
+export * from './entity-response'

@@ -1,31 +1,21 @@
 import {
   Body,
-  Controller,
   Delete,
   Get,
-  NotFoundException,
   Param,
   ParseIntPipe,
   Post,
   Put,
   Query,
-  UseFilters,
-  UseInterceptors,
 } from '@nestjs/common'
 import { I18nValidationPipe } from 'nestjs-i18n'
+import { Role } from '../../shared/entities/role.entity'
 import { RoleService } from '../../shared/services/role.service'
+import { ApiResourceController, ensureFound, PaginatedData } from '../common'
 import { RoleCreateDto, RoleUpdateDto } from '../dto'
 import { RoleQueryDto } from '../dto/role/role-query.dto'
-import {
-  ApiExceptionFilter,
-  PaginatedData,
-  TransformInterceptor,
-} from '../common'
-import { Role } from '../../shared/entities/role.entity'
 
-@Controller('api/roles')
-@UseInterceptors(TransformInterceptor)
-@UseFilters(ApiExceptionFilter)
+@ApiResourceController('api/roles')
 export class RoleController {
   constructor(private readonly roleService: RoleService) {}
 
@@ -36,11 +26,7 @@ export class RoleController {
 
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<Role> {
-    const role = await this.roleService.findOne({ where: { id } })
-    if (!role) {
-      throw new NotFoundException('Role not found')
-    }
-    return role
+    return this.ensureExists(id)
   }
 
   @Post()
@@ -70,9 +56,6 @@ export class RoleController {
 
   private async ensureExists(id: number): Promise<Role> {
     const role = await this.roleService.findOne({ where: { id } })
-    if (!role) {
-      throw new NotFoundException('Role not found')
-    }
-    return role
+    return ensureFound(role, 'Role not found')
   }
 }

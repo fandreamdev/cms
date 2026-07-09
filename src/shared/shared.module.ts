@@ -13,6 +13,7 @@ import { RoleService } from './services/role.service'
 import { Role } from './entities/role.entity'
 import { AccessService } from './services/access.service'
 import { Access } from './entities/access.entity'
+import { AccessParentResolver } from './services/access/access-parent.resolver'
 
 @Global()
 @Module({
@@ -37,6 +38,7 @@ import { Access } from './entities/access.entity'
     UserService,
     IsUserAlreadyExistConstraint,
     RoleService,
+    AccessParentResolver,
     AccessService,
   ],
   exports: [UserService, RoleService, AccessService],
