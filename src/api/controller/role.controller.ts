@@ -26,7 +26,7 @@ export class RoleController {
 
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<Role> {
-    return this.ensureExists(id)
+    return this.ensureExistsWithAccesses(id)
   }
 
   @Post()
@@ -34,7 +34,7 @@ export class RoleController {
     @Body(new I18nValidationPipe({ transform: true }))
     createDto: RoleCreateDto,
   ): Promise<Role> {
-    return this.roleService.create(createDto)
+    return this.roleService.createWithAccesses(createDto)
   }
 
   @Put(':id')
@@ -42,9 +42,7 @@ export class RoleController {
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: RoleUpdateDto,
   ): Promise<Role> {
-    await this.ensureExists(id)
-    await this.roleService.update(id, updateDto)
-    return this.findOne(id)
+    return this.roleService.updateWithAccesses(id, updateDto)
   }
 
   @Delete(':id')
@@ -56,6 +54,11 @@ export class RoleController {
 
   private async ensureExists(id: number): Promise<Role> {
     const role = await this.roleService.findOne({ where: { id } })
+    return ensureFound(role, 'Role not found')
+  }
+
+  private async ensureExistsWithAccesses(id: number): Promise<Role> {
+    const role = await this.roleService.findOneWithAccesses(id)
     return ensureFound(role, 'Role not found')
   }
 }

@@ -29,7 +29,7 @@ export class UserController {
 
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<User> {
-    return this.ensureExists(id)
+    return this.ensureExistsWithRoles(id)
   }
 
   @Post()
@@ -37,11 +37,11 @@ export class UserController {
     @Body(new I18nValidationPipe({ transform: true, groups: ['new'] }))
     createDto: UserCreateDto,
   ): Promise<User> {
-    const payload = { ...createDto }
-    if (payload.password) {
-      payload.password = await hashPassword(payload.password)
+    const payload = {
+      ...createDto,
+      password: await hashPassword(createDto.password),
     }
-    return this.userService.create(payload)
+    return this.userService.createWithRoles(payload)
   }
 
   @Put(':id')
@@ -50,13 +50,11 @@ export class UserController {
     @Body() updateDto: UserUpdateDto,
   ): Promise<User> {
     await this.ensureExists(id)
-    const { password, ...rest } = updateDto
-    const payload: Partial<User> = { ...rest }
-    if (password) {
-      payload.password = await hashPassword(password)
+    const payload = { ...updateDto }
+    if (payload.password) {
+      payload.password = await hashPassword(payload.password)
     }
-    await this.userService.update(id, payload)
-    return this.findOne(id)
+    return this.userService.updateWithRoles(id, payload)
   }
 
   @Put(':id/status')
@@ -76,6 +74,11 @@ export class UserController {
 
   private async ensureExists(id: number): Promise<User> {
     const user = await this.userService.findOne({ where: { id } })
+    return ensureFound(user, 'User not found')
+  }
+
+  private async ensureExistsWithRoles(id: number): Promise<User> {
+    const user = await this.userService.findOneWithRoles(id)
     return ensureFound(user, 'User not found')
   }
 }

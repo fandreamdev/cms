@@ -2,9 +2,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinTable,
+  ManyToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm'
+import { User } from './user.entity'
+import { Access } from './access.entity'
 
 @Entity('roles')
 export class Role {
@@ -13,6 +17,17 @@ export class Role {
 
   @Column({ length: 50, unique: true, comment: '角色名称' })
   name!: string
+
+  @ManyToMany(() => User, (user) => user.roles)
+  users!: User[]
+
+  @ManyToMany(() => Access, (access) => access.roles)
+  @JoinTable({
+    name: 'role_accesses',
+    joinColumn: { name: 'role_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'access_id', referencedColumnName: 'id' },
+  })
+  accesses!: Access[]
 
   @CreateDateColumn({
     name: 'created_at',

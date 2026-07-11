@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  ManyToMany,
   PrimaryGeneratedColumn,
   RelationId,
   Tree,
@@ -11,6 +12,7 @@ import {
 } from 'typeorm'
 import { IsEnum } from 'class-validator'
 import { AccessType } from '../enum/access.enum'
+import { Role } from './role.entity'
 
 @Entity('accesses')
 @Tree('materialized-path')
@@ -36,6 +38,9 @@ export class Access {
 
   @RelationId((access: Access) => access.parent)
   parentId!: number | null
+
+  @ManyToMany(() => Role, (role) => role.accesses)
+  roles!: Role[]
 
   @CreateDateColumn({
     name: 'created_at',

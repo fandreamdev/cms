@@ -2,8 +2,10 @@ import { applyDecorators } from '@nestjs/common'
 import { Type } from 'class-transformer'
 import {
   IsBoolean,
+  IsArray,
   IsEmail,
   IsIn,
+  IsInt,
   IsNumber,
   IsOptional,
   IsPhoneNumber,
@@ -36,6 +38,9 @@ export class UserCreateDto {
 
   @SortValidators()
   sort!: number
+
+  @RoleIdsValidators()
+  roleIds?: number[]
 }
 
 function UsernameValidators() {
@@ -154,5 +159,15 @@ function SortValidators() {
         min: 0,
       }),
     }),
+  )
+}
+
+function RoleIdsValidators() {
+  return applyDecorators(
+    IsOptional(),
+    IsArray(),
+    Type(() => Number),
+    IsInt({ each: true }),
+    Min(1, { each: true }),
   )
 }
