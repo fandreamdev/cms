@@ -8,6 +8,7 @@ import OSS from 'ali-oss'
 import { randomUUID } from 'crypto'
 import { mkdir, writeFile } from 'fs/promises'
 import { extname, join, posix, resolve } from 'path'
+import sharp from 'sharp'
 import { AppConfigType, UploadConfigType } from '../config'
 
 const IMAGE_TYPES = {
@@ -29,6 +30,7 @@ export class UploadService {
 
   async saveImage(file: Express.Multer.File): Promise<{ url: string }> {
     const extension = this.validateImage(file)
+    const compressedBuffer = await this.compressImage(file)
     const now = new Date()
     const key = posix.join(
       'images',
@@ -39,8 +41,35 @@ export class UploadService {
     )
 
     return this.config.storage === 'oss'
-      ? this.saveToOss(key, file.buffer)
-      : this.saveToLocal(key, file.buffer)
+      ? this.saveToOss(key, compressedBuffer)
+      : this.saveToLocal(key, compressedBuffer)
+  }
+
+  private async compressImage(file: Express.Multer.File): Promise<Buffer> {
+    try {
+      const image = sharp(file.buffer, { animated: true })
+        .rotate()
+        .resize({
+          width: this.config.imageMaxWidth ?? 1920,
+          withoutEnlargement: true,
+        })
+      const quality = this.config.imageQuality ?? 82
+
+      if (file.mimetype === 'image/jpeg') {
+        return image.jpeg({ quality, mozjpeg: true }).toBuffer()
+      }
+      if (file.mimetype === 'image/png') {
+        return image
+          .png({ compressionLevel: 9, adaptiveFiltering: true })
+          .toBuffer()
+      }
+      if (file.mimetype === 'image/gif') {
+        return image.gif({ effort: 7 }).toBuffer()
+      }
+      return image.webp({ quality, effort: 5 }).toBuffer()
+    } catch {
+      throw new BadRequestException('图片内容无效或压缩失败')
+    }
   }
 
   private validateImage(file: Express.Multer.File): string {

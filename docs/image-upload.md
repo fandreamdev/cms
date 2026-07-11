@@ -31,6 +31,8 @@ Content-Type: multipart/form-data
 UPLOAD_STORAGE=local
 UPLOAD_LOCAL_DIRECTORY=uploads
 UPLOAD_PUBLIC_BASE_URL=
+UPLOAD_IMAGE_MAX_WIDTH=1920
+UPLOAD_IMAGE_QUALITY=82
 ```
 
 文件保存在：
@@ -43,6 +45,23 @@ uploads/images/YYYY/MM/DD/UUID.ext
 
 ```env
 UPLOAD_PUBLIC_BASE_URL=https://cms.example.com
+```
+
+## 图片压缩
+
+所有通过验证的图片都会在写入本地或 OSS 之前统一压缩：
+
+- 根据 EXIF 方向自动旋转。
+- 移除 EXIF 等元数据。
+- 宽度超过 `UPLOAD_IMAGE_MAX_WIDTH` 时等比缩小，默认 1920px。
+- 小图不会被放大。
+- JPEG 和 WebP 使用 `UPLOAD_IMAGE_QUALITY`，默认质量 82。
+- PNG 使用最高无损压缩级别。
+- GIF 压缩时保留动画帧。
+
+```env
+UPLOAD_IMAGE_MAX_WIDTH=1920
+UPLOAD_IMAGE_QUALITY=82
 ```
 
 ## 阿里云 OSS
