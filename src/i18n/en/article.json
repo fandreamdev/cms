@@ -1,0 +1,41 @@
+{
+  "list_title": "Article List",
+  "form_title_create": "Create Article",
+  "form_title_update": "Edit Article",
+  "detail_title": "Article Detail",
+  "add": "Add Article",
+  "search": "Search",
+  "export": "Export",
+  "view": "View",
+  "edit": "Edit",
+  "delete": "Delete",
+  "back": "Back",
+  "actions": "Actions",
+  "total": "Total",
+  "page": "Page",
+  "prev": "Prev",
+  "next": "Next",
+  "delete_confirm": "Delete this record?",
+  "delete_failed": "Delete failed",
+  "status": {
+    "placeholder": "Choose...",
+    "inactive": "Inactive",
+    "active": "Active"
+  },
+  "boolean": {
+    "yes": "Yes",
+    "no": "No"
+  },
+  "field": {
+    "id": "Id",
+    "title": "Title",
+    "summary": "Summary",
+    "content": "Content",
+    "cover_url": "Cover Url",
+    "status": "Status",
+    "published_at": "Published At",
+    "sort": "Sort",
+    "created_at": "Created At",
+    "updated_at": "Updated At"
+  }
+}

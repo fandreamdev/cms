@@ -1,0 +1,37 @@
+{
+  "list_title": "Tag List",
+  "form_title_create": "Create Tag",
+  "form_title_update": "Edit Tag",
+  "detail_title": "Tag Detail",
+  "add": "Add Tag",
+  "search": "Search",
+  "export": "Export",
+  "view": "View",
+  "edit": "Edit",
+  "delete": "Delete",
+  "back": "Back",
+  "actions": "Actions",
+  "total": "Total",
+  "page": "Page",
+  "prev": "Prev",
+  "next": "Next",
+  "delete_confirm": "Delete this record?",
+  "delete_failed": "Delete failed",
+  "status": {
+    "placeholder": "Choose...",
+    "inactive": "Inactive",
+    "active": "Active"
+  },
+  "boolean": {
+    "yes": "Yes",
+    "no": "No"
+  },
+  "field": {
+    "id": "Id",
+    "name": "Name",
+    "description": "Description",
+    "sort": "Sort",
+    "created_at": "Created At",
+    "updated_at": "Updated At"
+  }
+}

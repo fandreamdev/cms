@@ -14,6 +14,14 @@ import { Role } from './entities/role.entity'
 import { AccessService } from './services/access.service'
 import { Access } from './entities/access.entity'
 import { AccessParentResolver } from './services/access/access-parent.resolver'
+import { TagService } from './services/tag.service'
+import { Tag } from './entities/tag.entity'
+import { ArticleService } from './services/article.service'
+import { Article } from './entities/article.entity'
+import { CategoryService } from './services/category.service'
+import { CategoryParentResolver } from './services/category/category-parent.resolver'
+import { Category } from './entities/category.entity'
+import { UploadService } from './services/upload.service'
 
 @Global()
 @Module({
@@ -32,7 +40,7 @@ import { AccessParentResolver } from './services/access/access-parent.resolver'
         return databaseConfig
       },
     }),
-    TypeOrmModule.forFeature([User, Role, Access]),
+    TypeOrmModule.forFeature([User, Role, Access, Tag, Article, Category]),
   ],
   providers: [
     UserService,
@@ -40,7 +48,20 @@ import { AccessParentResolver } from './services/access/access-parent.resolver'
     RoleService,
     AccessParentResolver,
     AccessService,
+    TagService,
+    ArticleService,
+    CategoryParentResolver,
+    CategoryService,
+    UploadService,
   ],
-  exports: [UserService, RoleService, AccessService],
+  exports: [
+    UserService,
+    RoleService,
+    AccessService,
+    TagService,
+    ArticleService,
+    CategoryService,
+    UploadService,
+  ],
 })
 export class SharedModule {}

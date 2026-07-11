@@ -5,6 +5,9 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import { useContainer } from 'class-validator'
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston'
 import { I18nValidationExceptionFilter, I18nValidationPipe } from 'nestjs-i18n'
+import { resolve } from 'path'
+import { ConfigService } from '@nestjs/config'
+import { AppConfigType, UploadConfigType } from './shared/config'
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -21,6 +24,16 @@ async function bootstrap() {
   )
   app.useGlobalFilters(
     new I18nValidationExceptionFilter({ detailedErrors: true }),
+  )
+
+  const uploadConfig = app
+    .get(ConfigService<AppConfigType>)
+    .get<UploadConfigType>('upload')
+  app.useStaticAssets(
+    resolve(process.cwd(), uploadConfig?.localDirectory ?? 'uploads'),
+    {
+      prefix: '/uploads/',
+    },
   )
 
   const swaggerConfig = new DocumentBuilder()
