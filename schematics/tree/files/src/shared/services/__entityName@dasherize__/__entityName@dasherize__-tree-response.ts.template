@@ -1,0 +1,9 @@
+import { <%= entity.className %> } from '../../entities/<%= dasherize(entityName) %>.entity'
+
+export function stripParentRelations(list: <%= entity.className %>[]): <%= entity.className %>[] {
+  return list.map((item) => {
+    const normalized = { ...item, children: stripParentRelations(item.children ?? []) }
+    normalized.parent = undefined as unknown as null
+    return normalized
+  })
+}

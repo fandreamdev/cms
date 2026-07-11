@@ -1,0 +1,4 @@
+import { PartialType } from '@nestjs/mapped-types'
+import { <%= classify(entityName) %>CreateDto } from './<%= dasherize(entityName) %>-create.dto'
+
+export class <%= classify(entityName) %>UpdateDto extends PartialType(<%= classify(entityName) %>CreateDto) {}

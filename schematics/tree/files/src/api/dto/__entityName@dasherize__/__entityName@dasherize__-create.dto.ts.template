@@ -1,0 +1,5 @@
+<%= renderTreeCreateDtoImports(entity) %>
+
+export class <%= classify(entityName) %>CreateDto {
+<%= renderTreeCreateDtoFields(entity).split('\n').map(function(line) { return line ? '  ' + line : line }).join('\n') %>
+}

@@ -13,7 +13,7 @@ import {
 import * as ts from 'typescript'
 import { plural } from 'pluralize'
 
-interface CrudOptions {
+interface TreeOptions {
   name: string
   desc: string
 }
@@ -41,7 +41,7 @@ interface EntityMeta {
   listFields: EntityField[]
 }
 
-export function crud(options: CrudOptions): Rule {
+export function tree(options: TreeOptions): Rule {
   return (tree: Tree, context: SchematicContext) => {
     const entityName = normalizeEntityName(options.name)
     const entityDesc = options.desc
@@ -52,6 +52,7 @@ export function crud(options: CrudOptions): Rule {
       entityPath,
       entityName,
     )
+    validateTreeEntity(tree.readText(entityPath), entityPath)
     const templateSource = apply(url('./files'), [
       applyTemplates({
         ...strings,
@@ -63,8 +64,10 @@ export function crud(options: CrudOptions): Rule {
         titleize,
         fieldLabelKey,
         renderCreateDtoFields,
+        renderTreeCreateDtoFields,
         renderQueryDtoFields,
         renderCreateDtoImports,
+        renderTreeCreateDtoImports,
         renderQueryDtoImports,
         renderI18nJson,
         hasDefaultOrder,
@@ -77,14 +80,31 @@ export function crud(options: CrudOptions): Rule {
     return chain([
       mergeWith(templateSource),
       updateApiModule(entityName),
-      updateSharedModule(entityName, entity.className),
+      updateTreeSharedModule(entityName, entity.className),
       updateDtoIndex(entityName),
       () => {
         context.logger.info(
-          `Generated CRUD for ${strings.classify(entityName)}`,
+          `Generated tree CRUD for ${strings.classify(entityName)}`,
         )
       },
     ])(tree, context)
+  }
+}
+
+function validateTreeEntity(sourceText: string, entityPath: string): void {
+  const sourceFile = ts.createSourceFile(entityPath, sourceText, ts.ScriptTarget.Latest, true)
+  let hasTree = false
+  let hasParent = false
+  let hasChildren = false
+  visit(sourceFile, (node) => {
+    if (ts.isClassDeclaration(node)) hasTree ||= hasDecorator(node, 'Tree')
+    if (ts.isPropertyDeclaration(node)) {
+      hasParent ||= hasDecorator(node, 'TreeParent') && node.name?.getText(sourceFile) === 'parent'
+      hasChildren ||= hasDecorator(node, 'TreeChildren') && node.name?.getText(sourceFile) === 'children'
+    }
+  })
+  if (!hasTree || !hasParent || !hasChildren) {
+    throw new Error(`${entityPath} must declare @Tree, a @TreeParent() parent property and a @TreeChildren() children property`)
   }
 }
 
@@ -194,6 +214,21 @@ function updateSharedModule(entityName: string, entityClassName: string): Rule {
   })
 }
 
+function updateTreeSharedModule(entityName: string, entityClassName: string): Rule {
+  return updateFile('/src/shared/shared.module.ts', (content, filePath) => {
+    const serviceName = `${strings.classify(entityName)}Service`
+    const resolverName = `${strings.classify(entityName)}ParentResolver`
+    let next = addImport(content, filePath, serviceName, `./services/${entityName}.service`)
+    next = addImport(next, filePath, resolverName, `./services/${entityName}/${entityName}-parent.resolver`)
+    next = addImport(next, filePath, entityClassName, `./entities/${entityName}.entity`)
+    next = addTypeOrmFeature(next, filePath, entityClassName)
+    next = addArrayItem(next, filePath, 'providers', resolverName)
+    next = addArrayItem(next, filePath, 'providers', serviceName)
+    next = addArrayItem(next, filePath, 'exports', serviceName)
+    return next
+  })
+}
+
 function updateDtoIndex(entityName: string): Rule {
   return updateFile('/src/api/dto/index.ts', (content, filePath) => {
     let next = addExport(
@@ -243,6 +278,16 @@ function renderCreateDtoImports(entity: EntityMeta): string {
   return collectDtoImports(entity.columns)
 }
 
+function renderTreeCreateDtoImports(entity: EntityMeta): string {
+  return collectDtoImports([
+    ...entity.columns,
+    {
+      name: 'parentId', columnName: 'parent_id', type: 'number',
+      nullable: true, hasDefault: false, primary: false, generated: false,
+    },
+  ])
+}
+
 function renderQueryDtoImports(entity: EntityMeta): string {
   return collectQueryImports(
     entity.columns.filter((field) => !isSecretField(field)),
@@ -251,6 +296,12 @@ function renderQueryDtoImports(entity: EntityMeta): string {
 
 function renderCreateDtoFields(entity: EntityMeta): string {
   return entity.columns.map(renderDtoField).join('\n\n')
+}
+
+function renderTreeCreateDtoFields(entity: EntityMeta): string {
+  const fields = renderCreateDtoFields(entity)
+  const parentId = `@IsOptional()\n@Type(() => Number)\n@IsNumber()\nparentId?: number | null`
+  return [fields, parentId].filter(Boolean).join('\n\n')
 }
 
 function renderQueryDtoFields(entity: EntityMeta): string {
@@ -266,7 +317,6 @@ function renderI18nJson(
   useComments: boolean,
   entityDesc: string,
 ): string {
-  console.log(entityName, entityDesc)
   const labels: Record<string, string> = {}
   for (const field of entity.displayFields) {
     labels[field.columnName] =

@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "$id": "CmsListSchema",
+  "title": "CMS List CRUD Options",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Entity name, for example role."
+    },
+    "desc": {
+      "type": "string",
+      "description": "Localized entity description.",
+      "default": ""
+    }
+  },
+  "required": ["name"]
+}

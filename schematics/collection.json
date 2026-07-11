@@ -1,10 +1,15 @@
 {
   "$schema": "../node_modules/@angular-devkit/schematics/collection-schema.json",
   "schematics": {
-    "crud": {
-      "description": "Generate CMS CRUD files from src/shared/entities/<name>.entity.ts.",
-      "factory": "./crud/index#crud",
-      "schema": "./crud/schema.json"
+    "list": {
+      "description": "Generate paginated list CRUD files from src/shared/entities/<name>.entity.ts.",
+      "factory": "./list/index#list",
+      "schema": "./list/schema.json"
+    },
+    "tree": {
+      "description": "Generate tree CRUD files from a TypeORM tree entity.",
+      "factory": "./tree/index#tree",
+      "schema": "./tree/schema.json"
     }
   }
 }

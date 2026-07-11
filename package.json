@@ -9,8 +9,10 @@
   "scripts": {
     "build": "nest build",
     "schematics:build": "tsc -p schematics/tsconfig.json",
-    "pregenerate:crud": "npm run schematics:build",
-    "generate:crud": "schematics .:crud --no-dry-run --name=%npm_config_name%",
+    "pregenerate:list": "npm run schematics:build",
+    "generate:list": "schematics .:list --no-dry-run --name=%npm_config_name% --desc=%npm_config_desc%",
+    "pregenerate:tree": "npm run schematics:build",
+    "generate:tree": "schematics .:tree --no-dry-run --name=%npm_config_name% --desc=%npm_config_desc%",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

@@ -1,0 +1,79 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  NotFoundException,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  Query,
+  UseFilters,
+  UseInterceptors,
+} from '@nestjs/common'
+import { I18nValidationPipe } from 'nestjs-i18n'
+import { <%= classify(entityName) %>Service } from '../../shared/services/<%= dasherize(entityName) %>.service'
+import { <%= classify(entityName) %>CreateDto, <%= classify(entityName) %>UpdateDto } from '../dto'
+import { <%= classify(entityName) %>QueryDto } from '../dto/<%= dasherize(entityName) %>/<%= dasherize(entityName) %>-query.dto'
+import {
+  ApiExceptionFilter,
+  PaginatedData,
+  TransformInterceptor,
+} from '../common'
+import { <%= classify(entityName) %> } from '../../shared/entities/<%= dasherize(entityName) %>.entity'
+
+@Controller('api/<%= plural(dasherize(entityName)) %>')
+@UseInterceptors(TransformInterceptor)
+@UseFilters(ApiExceptionFilter)
+export class <%= classify(entityName) %>Controller {
+  constructor(private readonly <%= camelize(entityName) %>Service: <%= classify(entityName) %>Service) {}
+
+  @Get()
+  async list(
+    @Query() queryDto: <%= classify(entityName) %>QueryDto,
+  ): Promise<PaginatedData<<%= classify(entityName) %>>> {
+    return this.<%= camelize(entityName) %>Service.findAll(queryDto)
+  }
+
+  @Get('tree')
+  async tree(): Promise<<%= classify(entityName) %>[]> {
+    return this.<%= camelize(entityName) %>Service.findTree()
+  }
+
+  @Get(':id')
+  async findOne(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<<%= classify(entityName) %>> {
+    const <%= camelize(entityName) %> = await this.<%= camelize(entityName) %>Service.findOne({ where: { id } })
+    if (!<%= camelize(entityName) %>) {
+      throw new NotFoundException('<%= classify(entityName) %> not found')
+    }
+    return <%= camelize(entityName) %>
+  }
+
+  @Post()
+  async create(
+    @Body(new I18nValidationPipe({ transform: true }))
+    createDto: <%= classify(entityName) %>CreateDto,
+  ): Promise<<%= classify(entityName) %>> {
+    return this.<%= camelize(entityName) %>Service.create(createDto)
+  }
+
+  @Put(':id')
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateDto: <%= classify(entityName) %>UpdateDto,
+  ): Promise<<%= classify(entityName) %>> {
+    await this.findOne(id)
+    await this.<%= camelize(entityName) %>Service.update(id, updateDto)
+    return this.findOne(id)
+  }
+
+  @Delete(':id')
+  async delete(@Param('id', ParseIntPipe) id: number): Promise<null> {
+    await this.findOne(id)
+    await this.<%= camelize(entityName) %>Service.delete(id)
+    return null
+  }
+}

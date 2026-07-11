@@ -1,0 +1,26 @@
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { InjectRepository } from '@nestjs/typeorm'
+import { TreeRepository } from 'typeorm'
+import { <%= entity.className %> } from '../../entities/<%= dasherize(entityName) %>.entity'
+
+@Injectable()
+export class <%= classify(entityName) %>ParentResolver {
+  constructor(@InjectRepository(<%= entity.className %>) private readonly repository: TreeRepository<<%= entity.className %>>) {}
+
+  async resolve(parentId: number | null | undefined, currentId?: number): Promise<<%= entity.className %> | null> {
+    if (parentId === undefined || parentId === null) return null
+    if (parentId === currentId) throw new BadRequestException('Parent <%= dasherize(entityName) %> cannot be itself')
+    const parent = await this.repository.findOne({ where: { id: parentId } as never })
+    if (!parent) throw new NotFoundException('Parent <%= dasherize(entityName) %> not found')
+    if (currentId) {
+      const current = await this.repository.findOne({ where: { id: currentId } as never })
+      if (current) {
+        const descendants = await this.repository.findDescendants(current)
+        if (descendants.some((item) => item.id === parentId)) {
+          throw new BadRequestException('Parent <%= dasherize(entityName) %> cannot be a descendant')
+        }
+      }
+    }
+    return parent
+  }
+}

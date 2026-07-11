@@ -1,12 +1,17 @@
 {
   "$schema": "http://json-schema.org/schema",
-  "$id": "CmsCrudSchema",
-  "title": "CMS CRUD Options",
+  "$id": "CmsTreeSchema",
+  "title": "CMS Tree CRUD Options",
   "type": "object",
   "properties": {
     "name": {
       "type": "string",
       "description": "Entity name, for example role."
+    },
+    "desc": {
+      "type": "string",
+      "description": "Localized entity description.",
+      "default": ""
     }
   },
   "required": ["name"]

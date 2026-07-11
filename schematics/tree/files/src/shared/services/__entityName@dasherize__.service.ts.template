@@ -1,0 +1,41 @@
+import { Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { InjectRepository } from '@nestjs/typeorm'
+import { DeepPartial, TreeRepository } from 'typeorm'
+import { <%= classify(entityName) %>CreateDto, <%= classify(entityName) %>UpdateDto } from '../../api/dto'
+import { <%= entity.className %> } from '../entities/<%= dasherize(entityName) %>.entity'
+import { BaseService } from './base.service'
+import { <%= classify(entityName) %>ParentResolver } from './<%= dasherize(entityName) %>/<%= dasherize(entityName) %>-parent.resolver'
+import { stripParentRelations } from './<%= dasherize(entityName) %>/<%= dasherize(entityName) %>-tree-response'
+
+@Injectable()
+export class <%= classify(entityName) %>Service extends BaseService<<%= entity.className %>> {
+  protected readonly logger = new Logger(<%= classify(entityName) %>Service.name)
+
+  constructor(
+    @InjectRepository(<%= entity.className %>) protected repository: TreeRepository<<%= entity.className %>>,
+    private readonly parentResolver: <%= classify(entityName) %>ParentResolver,
+  ) {
+    super(repository)
+  }
+
+  async findTree(): Promise<<%= entity.className %>[]> {
+    const tree = await this.repository.findTrees({ relations: ['parent', 'children'] })
+    return stripParentRelations(tree)
+  }
+
+  async create(createDto: <%= classify(entityName) %>CreateDto): Promise<<%= entity.className %>> {
+    const { parentId, ...values } = createDto
+    const parent = await this.parentResolver.resolve(parentId)
+    return this.repository.save(this.repository.create({ ...values, parent } as DeepPartial<<%= entity.className %>>))
+  }
+
+  async update(id: number, updateDto: <%= classify(entityName) %>UpdateDto) {
+    const entity = await this.repository.findOne({ where: { id } as never, relations: { parent: true } })
+    if (!entity) throw new NotFoundException('<%= classify(entityName) %> not found')
+    const { parentId, ...values } = updateDto
+    if (parentId !== undefined) entity.parent = await this.parentResolver.resolve(parentId, id)
+    Object.assign(entity, values)
+    await this.repository.save(entity)
+    return { success: true, message: 'Updated successfully' }
+  }
+}
