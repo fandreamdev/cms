@@ -7,10 +7,12 @@ import { AuthController } from './auth.controller'
 import { JwtAuthGuard } from './jwt-auth.guard'
 import { PermissionsGuard } from './permissions.guard'
 import { AuthService } from './auth.service'
+import { SystemModule } from '../modules/system/system.module'
 
 @Global()
 @Module({
   imports: [
+    SystemModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService<AppConfigType>) => {
