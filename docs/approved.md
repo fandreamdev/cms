@@ -1,96 +1,49 @@
-# 通用审批与文章审核需求分析
+# 文章审批与发布快照需求分析
 
-## 1. 文档目的
+## 1. 方案概述
 
-本文档整理 CMS 审批功能的已确认需求和技术方案。
+文章审批采用“原始文章表 + 已发布文章表”的双表方案，不创建通用审批表、文章版本表或临时审批表。
 
-当前首先实现文章审核，但审批能力不能与文章类型绑定。后续应能够扩展到图片、视频、商品等其他业务对象。
+- `articles`：保存后台当前编辑内容和审批状态。
+- `published_articles`：保存最近一次审核通过、可供前台查询的文章快照。
+- `article_tags`：保存后台文章当前选择的标签。
+- `published_article_tags`：保存最近一次审核通过的标签关系。
+- 分类和标签是系统内部维护数据，自身不参与审批。
+- 前台公开接口只查询发布表及发布侧标签关系，不读取原始文章表的内容和关系。
 
-## 2. 核心业务规则
+该方案的核心目标是：作者修改文章和等待审批期间，前台仍然可以读取最近一次审核通过的内容。
 
-### 2.1 文章发布规则
+### 1.1 当前实施阶段
 
-文章是否对外展示由两个条件共同决定：
+第一阶段暂不创建 `published_articles` 和 `published_article_tags`，也不提供公开文章接口。
 
-1. 文章存在审核通过的发布版本。
-2. 文章自身处于有效状态。
+- 审核通过时先输出日志 `文章[标题]已发布`，然后将原始文章审批状态改为 `APPROVED`。
+- 撤回时先输出日志 `文章[标题]已撤回`，然后将原始文章审批状态改为 `WITHDRAWN`。
+- 后续实现发布表时，再将日志占位替换为事务性的发布快照写入或删除。
 
-判断规则：
+## 2. 已确认的业务规则
 
-```ts
-const publiclyVisible =
-  article.status === 1 && article.publishedRevisionId !== null
-```
+1. 用户创建文章后，文章默认为草稿状态。
+2. 仅文章作者可以提交审批和撤回审批。
+3. 提交审批后，文章状态变为审批中。
+4. 审批员可以同意或拒绝审批。
+5. 拒绝审批时必须填写拒绝理由。
+6. 审核通过即代表文章可以对外发布。
+7. 审核通过时，将原始文章的最新业务数据全量同步到发布表。
+8. 文章的 `status` 表示是否有效：有效时可以展示，失效时相当于下架。
+9. 修改 `status` 不改变文章的审批状态。
+10. 分类和标签不参与审批，但文章选择的分类和标签属于文章发布快照的一部分。
+11. 除审批中和已撤回状态外，其他状态允许作者编辑。
+12. 审核通过或审核不通过的文章编辑完成后，不保存中间草稿，直接提交新一轮审批。
 
-字段语义：
+## 3. 数据模型
 
-- `status = 1`：文章有效，可以对外展示审核通过的版本。
-- `status = 0`：文章失效，相当于下架，不对外展示。
-- 修改 `status` 不改变审批状态和审批历史。
-- 失效文章重新启用后，继续展示最近一次审核通过的版本。
-- 从未审核通过的文章即使 `status = 1`，也不能对外展示。
+### 3.1 原始文章表
 
-### 2.2 审核通过与发布
-
-审核通过即代表对应文章版本可以发布。
-
-审核通过时，后端将文章的 `publishedRevisionId` 指向本次审核通过的版本。此前存在已发布版本时，由新版本替换旧版本。
-
-### 2.3 审批期间的线上内容
-
-已经发布的文章再次编辑并提交审核时：
-
-- 当前已发布版本继续对外展示。
-- 新修改内容保存在新的审批中版本。
-- 新版本审核通过后才替换线上版本。
-- 新版本被拒绝或撤回时，线上版本不受影响。
-
-## 3. 为什么不使用临时文章表
-
-不创建一张复制文章全部字段的临时表。
-
-临时表存在以下问题：
-
-- 文章增加字段时需要同步维护两套表结构。
-- 分类、标签等关系也要复制两套关联逻辑。
-- 审核通过时需要执行大量字段复制。
-- 容易丢失历史审核内容。
-- 无法自然支持多次修改和多版本审核。
-
-采用永久的文章版本表 `article_revisions` 保存每次需要审核的文章内容。
-
-## 4. 数据模型
-
-### 4.1 文章主对象
-
-`articles` 保存文章的稳定身份、作者和当前发布指针，不直接承担审批内容快照的职责。
-
-建议核心字段：
+`articles` 保存后台当前内容和审批信息。
 
 ```ts
-class Article {
-  id: number
-
-  // 作者
-  authorId: number
-
-  // 0：失效/下架，1：有效
-  status: number
-
-  // 当前对外展示的审核通过版本
-  publishedRevisionId: number | null
-
-  createdAt: Date
-  updatedAt: Date
-}
-```
-
-### 4.2 文章版本
-
-`article_revisions` 保存实际被审核的文章内容。
-
-```ts
-enum ArticleRevisionStatus {
+enum ArticleApprovalStatus {
   DRAFT = 'draft',
   PENDING = 'pending',
   APPROVED = 'approved',
@@ -98,163 +51,185 @@ enum ArticleRevisionStatus {
   WITHDRAWN = 'withdrawn',
 }
 
-class ArticleRevision {
+class Article {
   id: number
-  articleId: number
-  version: number
 
   title: string
   summary: string | null
   content: string
   coverUrl: string | null
+
+  status: number
+  sort: number
+
+  authorId: number
   categoryId: number
   tags: Tag[]
 
-  workflowStatus: ArticleRevisionStatus
+  approvalStatus: ArticleApprovalStatus
+  rejectionReason: string | null
+  submittedAt: Date | null
+  reviewedAt: Date | null
+  reviewerId: number | null
 
   createdAt: Date
   updatedAt: Date
 }
 ```
 
-文章版本必须保存当次审核所涉及的完整内容，包括分类和标签关系。
+字段说明：
 
-### 4.3 通用审批申请
+- `status = 1`：文章有效。
+- `status = 0`：文章失效，相当于下架。
+- `approvalStatus`：当前工作内容的审批状态。
+- `rejectionReason`：只有审核不通过时有值，其他状态必须为空。
+- `authorId`：文章作者，由后端根据当前登录用户设置，前端不能指定。
+- `reviewerId`：最后一次执行通过或拒绝操作的审核员。
 
-审批申请不能写死为文章审批。统一使用 `approval_requests`：
+### 3.2 已发布文章表
 
-```ts
-enum ApprovalStatus {
-  PENDING = 'pending',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-  WITHDRAWN = 'withdrawn',
-}
+`published_articles` 保存最近一次审核通过的文章业务快照。
 
-class ApprovalRequest {
-  id: number
-
-  // article_revision、image 等
-  subjectType: string
-
-  // 对应业务对象 ID
-  subjectId: number
-
-  applicantId: number
-  reviewerId: number | null
-
-  status: ApprovalStatus
-  rejectionReason: string | null
-
-  submittedAt: Date
-  reviewedAt: Date | null
-  withdrawnAt: Date | null
-
-  metadata: Record<string, unknown> | null
-}
-```
-
-文章审批目标：
-
-```text
-subjectType = article_revision
-subjectId = ArticleRevision.id
-```
-
-未来图片审批目标：
-
-```text
-subjectType = image
-subjectId = Image.id
-```
-
-业务内容不保存在审批申请表中。审批申请只负责指出审核对象、申请人、审核人和当前审批结果。
-
-### 4.4 审批操作流水
-
-使用 `approval_records` 保存不可修改的审批操作历史：
+除审批相关字段外，发布表与原始文章表的业务字段保持一致。
 
 ```ts
-enum ApprovalAction {
-  SUBMIT = 'submit',
-  APPROVE = 'approve',
-  REJECT = 'reject',
-  WITHDRAW = 'withdraw',
-}
-
-class ApprovalRecord {
+class PublishedArticle {
+  // 与 Article.id 保持一致
   id: number
-  approvalRequestId: number
-  action: ApprovalAction
-  operatorId: number
-  reason: string | null
+
+  title: string
+  summary: string | null
+  content: string
+  coverUrl: string | null
+
+  status: number
+  sort: number
+
+  authorId: number
+  categoryId: number
+  tags: Tag[]
+
   createdAt: Date
+  updatedAt: Date
+  publishedAt: Date
 }
 ```
 
-每次重新提交审批都创建新的 `ApprovalRequest`，不复用已拒绝或已撤回的审批申请。
+发布表不包含：
 
-## 5. 审核内容保存位置
-
-审核内容保存在对应业务对象中，不保存在通用审批表中：
-
-| 审批类型 | 审核内容保存位置             |
-| -------- | ---------------------------- |
-| 文章     | `article_revisions`          |
-| 图片     | `images` 和本地/OSS 文件对象 |
-| 视频     | 未来的 `videos`              |
-| 其他业务 | 对应业务版本表或业务对象表   |
-
-审核员查询审批详情时，审批服务根据 `subjectType` 找到业务处理器，再通过 `subjectId` 查询具体内容。
-
-文章审批详情返回示例：
-
-```json
-{
-  "approval": {
-    "id": 100,
-    "subjectType": "article_revision",
-    "subjectId": 12,
-    "status": "pending",
-    "applicantId": 5,
-    "submittedAt": "2026-07-11T10:00:00.000Z"
-  },
-  "subject": {
-    "id": 12,
-    "articleId": 3,
-    "version": 2,
-    "title": "CMS 使用指南",
-    "content": "<p>需要审核的正文</p>",
-    "category": {},
-    "tags": []
-  }
-}
+```text
+approvalStatus
+rejectionReason
+submittedAt
+reviewedAt
+reviewerId
 ```
 
-## 6. 编辑规则
+建议使用原始文章 ID 作为发布表主键：
 
-业务要求：除审批中和已撤回状态外，其他状态均允许用户进入编辑页面。
+```sql
+published_articles.id = articles.id
+```
 
-“允许编辑”不代表直接覆盖原审核版本。
+并建立外键：
 
-| 当前状态   | 是否允许编辑 | 保存行为                           |
-| ---------- | ------------ | ---------------------------------- |
-| 草稿       | 是           | 可以继续保存当前草稿，或提交审核   |
-| 审批中     | 否           | 返回 HTTP `409`                    |
-| 审核通过   | 是           | 编辑完成后创建新版本并直接提交审核 |
-| 审核不通过 | 是           | 编辑完成后创建新版本并直接提交审核 |
-| 已撤回     | 否           | 返回 HTTP `409`                    |
+```sql
+FOREIGN KEY (id) REFERENCES articles(id) ON DELETE CASCADE
+```
 
-审核通过和审核不通过的文章编辑后不创建一个可长期停留的草稿。用户点击提交时，后端直接：
+### 3.3 字段同步约束
 
-1. 创建新的 `ArticleRevision`。
-2. 将新版本状态设置为 `PENDING`。
-3. 创建新的 `ApprovalRequest`。
-4. 写入 `ApprovalRecord(SUBMIT)`。
+发布表不是部分字段的展示表，而是完整的已审核业务快照。
 
-原审核版本保持不可修改，用于保证线上内容和审批历史不被篡改。
+以后为文章增加任何非审批业务字段时，必须同时完成：
 
-## 7. 状态流转
+1. 修改 `Article`。
+2. 修改 `PublishedArticle`。
+3. 修改数据库结构。
+4. 修改审核通过时的同步映射。
+5. 补充同步测试。
+
+建议抽取共享字段定义或统一映射函数，降低字段遗漏风险。
+
+## 4. 分类与标签
+
+### 4.1 分类
+
+分类自身由系统内部直接维护，不参与审批。
+
+两张文章表分别保存分类 ID：
+
+```text
+articles.category_id
+published_articles.category_id
+```
+
+后台文章按分类查询：
+
+```sql
+SELECT *
+FROM articles
+WHERE category_id = ?;
+```
+
+公开文章按分类查询：
+
+```sql
+SELECT *
+FROM published_articles
+WHERE category_id = ?
+  AND status = 1;
+```
+
+文章在审批中修改 `articles.category_id` 时，不影响 `published_articles.category_id`。
+
+### 4.2 标签
+
+标签自身由系统内部直接维护，不参与审批。
+
+原始文章和发布文章分别使用自己的标签关联表：
+
+```text
+article_tags
+published_article_tags
+```
+
+推荐结构：
+
+```sql
+CREATE TABLE published_article_tags (
+  article_id INT NOT NULL,
+  tag_id INT NOT NULL,
+  PRIMARY KEY (article_id, tag_id),
+  FOREIGN KEY (article_id)
+    REFERENCES published_articles(id)
+    ON DELETE CASCADE,
+  FOREIGN KEY (tag_id)
+    REFERENCES tags(id)
+    ON DELETE RESTRICT
+);
+```
+
+公开文章按标签查询：
+
+```sql
+SELECT pa.*
+FROM published_articles pa
+INNER JOIN published_article_tags pat
+  ON pat.article_id = pa.id
+WHERE pat.tag_id = ?
+  AND pa.status = 1;
+```
+
+公开查询不访问 `articles` 或 `article_tags`，因此未审核的分类和标签选择不会提前生效。
+
+### 4.3 分类和标签信息变更
+
+分类名称、标签名称和描述等基础信息不保存额外快照。
+
+前台读取发布文章时，可以关联当前 `categories` 和 `tags` 数据。因此系统管理员修改分类或标签名称后，前台可以立即显示最新名称，无需重新审批文章。
+
+## 5. 审批状态流转
 
 ```mermaid
 stateDiagram-v2
@@ -264,204 +239,272 @@ stateDiagram-v2
     审批中 --> 审核通过: 审核员同意
     审批中 --> 审核不通过: 审核员拒绝
     审批中 --> 已撤回: 作者撤回
-    审核通过 --> 审批中: 编辑并直接提交新版本
-    审核不通过 --> 审批中: 编辑并直接提交新版本
+    审核通过 --> 审批中: 编辑后直接提交
+    审核不通过 --> 审批中: 编辑后直接提交
 ```
 
-限制：
+状态限制：
 
-- 只有审批中的版本可以被通过或拒绝。
-- 只有审批中的版本可以撤回。
-- 审批中的版本禁止修改。
-- 已撤回版本禁止修改。
-- 审核通过和审核不通过的历史版本禁止原地修改。
-- 拒绝时理由必填，建议限制为 1～500 个字符。
-- 非拒绝状态的 `rejectionReason` 必须为空。
+- 只有草稿、审核通过、审核不通过状态可以发起审批。
+- 只有审批中状态可以被审核通过或审核拒绝。
+- 只有审批中状态可以撤回。
+- 审批中的文章禁止编辑。
+- 已撤回的文章禁止编辑。
 - 非法状态流转返回 HTTP `409 Conflict`。
 
-## 8. 权限规则
+## 6. 编辑规则
 
-### 8.1 作者
+| 当前状态   | 是否允许编辑 | 保存行为                     |
+| ---------- | ------------ | ---------------------------- |
+| 草稿       | 是           | 可以保存草稿或提交审批       |
+| 审批中     | 否           | 返回 HTTP `409`              |
+| 审核通过   | 是           | 编辑完成后直接提交新一轮审批 |
+| 审核不通过 | 是           | 编辑完成后直接提交新一轮审批 |
+| 已撤回     | 否           | 返回 HTTP `409`              |
 
-- 创建文章时，当前登录用户自动成为作者。
-- 前端不能自行指定 `authorId`。
-- 仅文章作者可以提交审批。
-- 仅文章作者可以撤回自己的待审批版本。
-- 文章作者可以编辑草稿、审核通过和审核不通过的文章。
-- 文章作者不能编辑审批中和已撤回的版本。
+审核通过或审核不通过的文章编辑提交时：
 
-### 8.2 审核员
+1. 直接更新 `articles` 中的当前工作内容。
+2. 将 `approvalStatus` 设置为 `PENDING`。
+3. 清空上一次拒绝理由和审核信息。
+4. 不修改 `published_articles`。
 
-- 管理员或具有审核权限的角色可以查询待审核数据。
-- 具有审核权限的用户可以通过或拒绝审批。
-- 普通作者不能调用审批通过或审批拒绝接口。
+因此，审批期间前台仍然读取上一次审核通过的发布快照。
 
-### 8.3 上下架权限
+## 7. 审批操作
 
-文章 `status` 控制有效或失效。建议仅管理员、内容管理员或具有文章上下架权限的用户可以修改。
+### 7.1 创建文章
 
-## 9. 通用审批处理器
+1. 根据当前用户设置 `authorId`。
+2. 创建原始文章。
+3. 设置 `approvalStatus = DRAFT`。
+4. 不创建发布表记录。
 
-通用审批服务不能直接包含文章发布逻辑。每种审批目标提供独立处理器：
+### 7.2 提交审批
+
+提交人必须是文章作者。
+
+```text
+approvalStatus = PENDING
+rejectionReason = null
+submittedAt = 当前时间
+reviewedAt = null
+reviewerId = null
+```
+
+提交审批不修改发布表。
+
+### 7.3 审核通过
+
+审核通过时，在同一个数据库事务中：
+
+1. 锁定原始文章。
+2. 校验当前状态为 `PENDING`。
+3. 校验当前用户具有审核权限。
+4. 将原始文章全部业务字段同步到 `published_articles`。
+5. 全量替换 `published_article_tags`。
+6. 将原始文章状态更新为 `APPROVED`。
+7. 清空拒绝理由。
+8. 设置审核员和审核时间。
+9. 提交事务。
+
+发布记录已存在时执行更新，不存在时执行创建。
+
+任何一步失败时必须回滚全部操作，不能出现文章已通过但发布数据未同步完整的情况。
+
+### 7.4 审核拒绝
+
+审核拒绝只修改原始文章：
+
+```text
+approvalStatus = REJECTED
+rejectionReason = 必填拒绝理由
+reviewerId = 当前审核员
+reviewedAt = 当前时间
+```
+
+发布表和发布标签关系保持不变。
+
+拒绝理由建议限制为 1～500 个字符。
+
+### 7.5 撤回
+
+按当前提出的业务方案，作者撤回审批时：
+
+1. 校验当前状态为 `PENDING`。
+2. 校验当前用户是文章作者。
+3. 删除对应的 `published_article_tags`。
+4. 删除对应的 `published_articles`。
+5. 将原始文章状态更新为 `WITHDRAWN`。
+6. 提交事务。
+
+该规则意味着：如果文章以前已经发布，作者撤回新一轮审批时，旧的线上版本也会立即下架。
+
+这一行为与通常的“仅撤回本轮修改”不同，但本方案按“撤回同时撤销发布”定义执行。前端应明确提示：
+
+```text
+撤回后文章将从前台下架，且已撤回文章不能继续编辑。
+```
+
+## 8. 有效与失效
+
+`status` 不是审批字段，两张表都保存该字段。
+
+文章已经存在发布记录时，修改有效状态需要在同一事务中同步两张表：
 
 ```ts
-interface ApprovalSubjectHandler {
-  subjectType: string
-
-  ensureExists(subjectId: number): Promise<void>
-  canSubmit(subjectId: number, userId: number): Promise<boolean>
-  canWithdraw(subjectId: number, userId: number): Promise<boolean>
-
-  onSubmitted(subjectId: number): Promise<void>
-  onApproved(subjectId: number, reviewerId: number): Promise<void>
-  onRejected(
-    subjectId: number,
-    reviewerId: number,
-    reason: string,
-  ): Promise<void>
-  onWithdrawn(subjectId: number, userId: number): Promise<void>
-}
+await transaction(async (manager) => {
+  await manager.update(Article, id, { status })
+  await manager.update(PublishedArticle, id, { status })
+})
 ```
 
-文章处理器：
+- `status = 0`：发布记录保留，但前台查询不到，相当于下架。
+- `status = 1`：发布记录重新可见。
+- 尚未审核通过、没有发布记录的文章只更新原始表。
 
-```text
-subjectType = article_revision
+公开接口必须始终带上：
+
+```sql
+WHERE published_articles.status = 1
 ```
 
-图片处理器：
+## 9. 权限规则
 
-```text
-subjectType = image
-```
+### 9.1 作者
 
-审批服务根据 `subjectType` 从处理器注册表中找到对应处理器。
+- 创建文章时由后端自动设置作者。
+- 仅作者可以保存自己的草稿。
+- 仅作者可以提交审批。
+- 仅作者可以撤回审批。
+- 作者不能编辑审批中或已撤回的文章。
+
+### 9.2 审核员
+
+- 管理员或拥有文章审核权限的用户可以查询待审核文章。
+- 审核员可以同意或拒绝审批。
+- 拒绝时必须填写拒绝理由。
+
+### 9.3 上下架权限
+
+建议只有管理员、内容管理员或具有上下架权限的用户可以修改 `status`。
 
 ## 10. 接口设计
 
-### 10.1 草稿文章提交审批
+### 10.1 后台文章接口
+
+后台接口读取 `articles`：
 
 ```http
-POST /api/article-revisions/:id/submit
+GET  /api/articles
+GET  /api/articles/:id
+POST /api/articles
+PUT  /api/articles/:id
 ```
 
-仅作者可以提交自己的草稿版本。
+### 10.2 提交审批
 
-### 10.2 审核通过或不通过文章的编辑提交
+草稿提交：
 
 ```http
-POST /api/articles/:id/submit-revision
+POST /api/articles/:id/submit
+```
+
+审核通过或审核不通过的文章编辑完成后直接提交：
+
+```http
+POST /api/articles/:id/submit-changes
 Content-Type: application/json
 ```
 
-请求体包含编辑后的完整文章内容：
+`submit-changes` 请求体包含完整文章业务数据，包括分类和标签。
+
+### 10.3 审核操作
+
+```http
+POST /api/articles/:id/approve
+POST /api/articles/:id/reject
+POST /api/articles/:id/withdraw
+```
+
+拒绝请求：
 
 ```json
 {
-  "title": "修改后的标题",
-  "summary": "修改后的摘要",
-  "content": "<p>修改后的正文</p>",
-  "coverUrl": "/uploads/images/new-cover.jpg",
-  "categoryId": 2,
-  "tagIds": [1, 3]
+  "reason": "文章中的数据来源不明确，请补充引用。"
 }
 ```
 
-该接口不保存中间草稿，而是直接创建审批中版本并发起审批。
+### 10.4 待审核查询
 
-### 10.3 作者撤回
-
-```http
-POST /api/article-revisions/:id/withdraw
-```
-
-仅作者可以撤回自己的审批中版本。
-
-### 10.4 审批列表
+复用后台文章分页接口：
 
 ```http
-GET /api/approvals?status=pending&subjectType=article_revision
+GET /api/articles?approvalStatus=pending&page=1&pageSize=10
 ```
 
-复用通用分页结构，不单独创建文章待审核列表接口。
-
-### 10.5 审批详情
+### 10.5 有效状态
 
 ```http
-GET /api/approvals/:id
+PUT /api/articles/:id/status
 ```
 
-返回审批信息和对应业务审核内容。
+### 10.6 公开文章接口
 
-### 10.6 审核通过
+公开接口只读取 `published_articles`、`published_article_tags`、`categories` 和 `tags`：
 
 ```http
-POST /api/approvals/:id/approve
+GET /api/public/articles
+GET /api/public/articles/:id
 ```
 
-### 10.7 审核拒绝
+支持的主要查询条件：
 
 ```http
-POST /api/approvals/:id/reject
-Content-Type: application/json
+GET /api/public/articles?categoryId=2
+GET /api/public/articles?tagId=3
+GET /api/public/articles?title=NestJS
 ```
 
-```json
-{
-  "reason": "内容中的数据来源不明确，请补充引用。"
-}
+公开接口不得回查 `articles` 或 `article_tags` 获取文章业务内容和文章标签关系。
+
+## 11. 事务与并发要求
+
+以下操作必须使用数据库事务：
+
+- 审核通过并同步发布快照。
+- 撤回并删除发布快照。
+- 修改有效状态并同步发布状态。
+- 删除文章和关联发布数据。
+
+审核操作需要锁定原始文章记录，避免：
+
+- 两名审核员同时处理同一文章。
+- 作者在审核过程中修改文章。
+- 重复通过、重复拒绝或重复撤回。
+
+建议通过条件更新或悲观锁保证状态一致：
+
+```sql
+UPDATE articles
+SET approval_status = 'approved'
+WHERE id = ?
+  AND approval_status = 'pending';
 ```
 
-## 11. 事务要求
+受影响行数不是 1 时，返回 HTTP `409 Conflict`。
 
-以下操作必须在同一个数据库事务中完成。
+## 12. 前端交互要求
 
-### 11.1 提交审批
-
-1. 校验当前用户是文章作者。
-2. 校验当前没有审批中的版本。
-3. 校验文章内容、分类和标签。
-4. 创建或更新目标文章版本。
-5. 将版本状态设置为 `PENDING`。
-6. 创建 `ApprovalRequest(PENDING)`。
-7. 创建 `ApprovalRecord(SUBMIT)`。
-8. 提交事务。
-
-任一步骤失败时，不能保留版本、审批申请或审批流水中的部分数据。
-
-### 11.2 审核通过
-
-1. 锁定审批申请，防止重复审核。
-2. 校验申请仍为 `PENDING`。
-3. 校验审核员权限。
-4. 将审批申请和文章版本标记为 `APPROVED`。
-5. 更新文章 `publishedRevisionId`。
-6. 写入 `ApprovalRecord(APPROVE)`。
-7. 提交事务。
-
-### 11.3 审核拒绝与撤回
-
-审批拒绝和撤回同样必须原子更新审批申请、业务版本状态和审批流水。
-
-## 12. 并发和数据完整性
-
-- 同一个文章同时只能存在一个审批中的版本。
-- 审核操作需要使用事务和行锁，避免两名审核员重复处理。
-- 已提交的审批内容必须保持不可变。
-- 审批目标建议使用软删除，避免历史审批记录失去业务对象。
-- `subjectType + subjectId` 的有效性由对应审批处理器校验。
-- 可选增加审核内容 SHA-256，用于检测审批期间的异常内容修改。
-
-## 13. 前端交互要求
-
-### 13.1 草稿
+### 12.1 草稿
 
 显示：
 
+- 编辑
 - 保存草稿
 - 提交审核
 
-### 13.2 审批中
+### 12.2 审批中
 
 显示：
 
@@ -470,44 +513,61 @@ Content-Type: application/json
 
 不显示编辑按钮。
 
-### 13.3 审核通过
+### 12.3 审核通过
 
 - 显示已发布状态。
-- 允许作者进入编辑页面。
-- 编辑页面提交按钮文案为“提交审核”。
-- 提交后线上继续展示原审核通过版本。
+- 允许作者编辑。
+- 编辑完成后按钮为“提交审核”。
+- 新一轮审批期间继续展示当前发布快照。
 
-### 13.4 审核不通过
+### 12.4 审核不通过
 
 - 显示拒绝理由。
-- 允许作者进入编辑页面。
-- 编辑完成后直接提交新一轮审核。
+- 允许作者编辑。
+- 编辑完成后直接提交新一轮审批。
 
-### 13.5 已撤回
+### 12.5 已撤回
 
 - 不显示编辑按钮。
-- 不允许再次提交同一个版本。
+- 明确显示文章已从前台下架。
+- 不允许再次提交同一文章。
 
-## 14. 已确认决策
+## 13. 方案优点
 
-1. 审核通过即代表对外发布。
-2. `status` 同时控制文章是否对外有效，失效即下架。
-3. 审批期间继续展示上一审核通过版本。
-4. 不使用临时文章表，使用文章版本表。
-5. 审批对象必须是通用对象，不能与文章写死。
-6. 审核内容保存在业务版本对象中，不保存在通用审批表中。
-7. 仅文章作者可以提交或撤回。
-8. 审批中和已撤回状态禁止编辑。
-9. 审核通过和审核不通过状态允许编辑。
-10. 审核通过或审核不通过的文章编辑完成后，不保存中间草稿，直接创建审批中版本并发起审批。
+- 数据结构比通用审批和文章版本方案简单。
+- 不需要审批表和审批处理器注册机制。
+- 后台编辑内容与前台发布内容完全隔离。
+- 审批中和审核拒绝不会覆盖线上内容。
+- 前台查询只依赖发布侧数据，边界清晰。
+- 分类和标签可以继续使用现有系统管理能力。
+- 发布表天然适合作为公开查询模型。
 
-## 15. 待确认事项
+## 14. 方案限制
 
-以下事项尚未最终确认：
+- 只能保留最近一次审核通过的内容。
+- 不保存完整审批历史。
+- 无法查看过去发布过的文章版本。
+- 无法统计历史拒绝次数和每一次拒绝理由。
+- 其他类型的审批需要各自实现状态和发布逻辑。
+- 原始表和发布表字段高度重复，需要严格维护同步映射。
+- 按当前撤回定义，撤回新一轮审批会同时删除旧发布快照。
 
-1. 审核员是否允许审核自己创建的文章。
-2. 管理员是否可以代替作者撤回审批。
-3. 已撤回版本是否允许通过“复制为新版本”重新发起审批。
-4. 分类或标签被删除时，历史文章版本如何展示对应信息。
-5. 是否在第一期实现审批内容哈希校验。
-6. 是否需要审批评论、多人会签或多级审批，为后续扩展预留到什么程度。
+如果未来需要完整审计、多级审批、多人会签或历史版本回滚，需要重新引入审批记录表或版本表。
+
+## 15. 验收标准
+
+1. 新建文章默认为草稿，公开接口不可见。
+2. 只有作者可以提交或撤回文章。
+3. 提交后文章进入审批中且禁止编辑。
+4. 审核通过后发布表包含原始文章的全部非审批业务字段。
+5. 审核通过后发布标签关系与原始标签关系一致。
+6. 审核拒绝时保存拒绝理由，发布表不发生变化。
+7. 已发布文章重新编辑和审批期间，前台继续展示旧发布快照。
+8. 新一轮审核通过后，发布快照被完整替换。
+9. 分类查询只使用 `published_articles.category_id`。
+10. 标签查询只使用 `published_article_tags.tag_id`。
+11. 公开查询不读取原始文章内容或原始标签关系。
+12. 设置 `status = 0` 后文章立即从公开接口消失。
+13. 设置 `status = 1` 后已有发布快照重新可见。
+14. 撤回审批后发布记录和发布标签关系被删除。
+15. 审核同步任一步骤失败时，原始状态和发布数据全部回滚。
