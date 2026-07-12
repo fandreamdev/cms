@@ -15,12 +15,14 @@ import { hashPassword } from '../../shared/utils/pwd'
 import { ApiResourceController, ensureFound, PaginatedData } from '../common'
 import { UserCreateDto, UserUpdateDto } from '../dto'
 import { UserQueryDto } from '../dto/user/user-query.dto'
+import { RequirePermissions } from '../../auth/permissions.decorator'
 
 @ApiResourceController('api/users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
+  @RequirePermissions('user:view')
   async list(
     @Query() userQueryDto: UserQueryDto,
   ): Promise<PaginatedData<User>> {
@@ -28,11 +30,13 @@ export class UserController {
   }
 
   @Get(':id')
+  @RequirePermissions('user:view')
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<User> {
     return this.ensureExistsWithRoles(id)
   }
 
   @Post()
+  @RequirePermissions('user:create')
   async create(
     @Body(new I18nValidationPipe({ transform: true, groups: ['new'] }))
     createDto: UserCreateDto,
@@ -45,6 +49,7 @@ export class UserController {
   }
 
   @Put(':id')
+  @RequirePermissions('user:edit')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UserUpdateDto,
@@ -58,6 +63,7 @@ export class UserController {
   }
 
   @Put(':id/status')
+  @RequirePermissions('user:edit')
   async toggleStatus(@Param('id', ParseIntPipe) id: number): Promise<User> {
     const user = await this.ensureExists(id)
     const status = user.status === 1 ? 0 : 1
@@ -66,6 +72,7 @@ export class UserController {
   }
 
   @Delete(':id')
+  @RequirePermissions('user:delete')
   async delete(@Param('id', ParseIntPipe) id: number): Promise<null> {
     await this.ensureExists(id)
     await this.userService.delete(id)

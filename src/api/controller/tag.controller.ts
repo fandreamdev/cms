@@ -22,6 +22,7 @@ import {
   TransformInterceptor,
 } from '../common'
 import { Tag } from '../../shared/entities/tag.entity'
+import { RequirePermissions } from '../../auth/permissions.decorator'
 
 @Controller('api/tags')
 @UseInterceptors(TransformInterceptor)
@@ -30,11 +31,13 @@ export class TagController {
   constructor(private readonly tagService: TagService) {}
 
   @Get()
+  @RequirePermissions('tag:view')
   async list(@Query() queryDto: TagQueryDto): Promise<PaginatedData<Tag>> {
     return this.tagService.findAll(queryDto)
   }
 
   @Get(':id')
+  @RequirePermissions('tag:view')
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<Tag> {
     const tag = await this.tagService.findOne({ where: { id } })
     if (!tag) {
@@ -44,6 +47,7 @@ export class TagController {
   }
 
   @Post()
+  @RequirePermissions('tag:create')
   async create(
     @Body(new I18nValidationPipe({ transform: true }))
     createDto: TagCreateDto,
@@ -52,6 +56,7 @@ export class TagController {
   }
 
   @Put(':id')
+  @RequirePermissions('tag:edit')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: TagUpdateDto,
@@ -62,6 +67,7 @@ export class TagController {
   }
 
   @Delete(':id')
+  @RequirePermissions('tag:delete')
   async delete(@Param('id', ParseIntPipe) id: number): Promise<null> {
     await this.findOne(id)
     await this.tagService.delete(id)

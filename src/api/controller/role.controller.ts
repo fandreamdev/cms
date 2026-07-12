@@ -14,22 +14,26 @@ import { RoleService } from '../../shared/services/role.service'
 import { ApiResourceController, ensureFound, PaginatedData } from '../common'
 import { RoleCreateDto, RoleUpdateDto } from '../dto'
 import { RoleQueryDto } from '../dto/role/role-query.dto'
+import { RequirePermissions } from '../../auth/permissions.decorator'
 
 @ApiResourceController('api/roles')
 export class RoleController {
   constructor(private readonly roleService: RoleService) {}
 
   @Get()
+  @RequirePermissions('role:view')
   async list(@Query() queryDto: RoleQueryDto): Promise<PaginatedData<Role>> {
     return this.roleService.findAll(queryDto)
   }
 
   @Get(':id')
+  @RequirePermissions('role:view')
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<Role> {
     return this.ensureExistsWithAccesses(id)
   }
 
   @Post()
+  @RequirePermissions('role:create')
   async create(
     @Body(new I18nValidationPipe({ transform: true }))
     createDto: RoleCreateDto,
@@ -38,6 +42,7 @@ export class RoleController {
   }
 
   @Put(':id')
+  @RequirePermissions('role:edit')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: RoleUpdateDto,
@@ -46,6 +51,7 @@ export class RoleController {
   }
 
   @Delete(':id')
+  @RequirePermissions('role:delete')
   async delete(@Param('id', ParseIntPipe) id: number): Promise<null> {
     await this.ensureExists(id)
     await this.roleService.delete(id)

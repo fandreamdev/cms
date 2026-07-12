@@ -22,6 +22,7 @@ import {
   TransformInterceptor,
 } from '../common'
 import { Category } from '../../shared/entities/category.entity'
+import { RequirePermissions } from '../../auth/permissions.decorator'
 
 @Controller('api/categories')
 @UseInterceptors(TransformInterceptor)
@@ -30,6 +31,7 @@ export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
   @Get()
+  @RequirePermissions('category:view')
   async list(
     @Query() queryDto: CategoryQueryDto,
   ): Promise<PaginatedData<Category>> {
@@ -37,11 +39,13 @@ export class CategoryController {
   }
 
   @Get('tree')
+  @RequirePermissions('category:view')
   async tree(): Promise<Category[]> {
     return this.categoryService.findTree()
   }
 
   @Get(':id')
+  @RequirePermissions('category:view')
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<Category> {
     const category = await this.categoryService.findOne({ where: { id } })
     if (!category) {
@@ -51,6 +55,7 @@ export class CategoryController {
   }
 
   @Post()
+  @RequirePermissions('category:create')
   async create(
     @Body(new I18nValidationPipe({ transform: true }))
     createDto: CategoryCreateDto,
@@ -59,6 +64,7 @@ export class CategoryController {
   }
 
   @Put(':id')
+  @RequirePermissions('category:edit')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: CategoryUpdateDto,
@@ -69,6 +75,7 @@ export class CategoryController {
   }
 
   @Delete(':id')
+  @RequirePermissions('category:delete')
   async delete(@Param('id', ParseIntPipe) id: number): Promise<null> {
     await this.findOne(id)
     await this.categoryService.delete(id)

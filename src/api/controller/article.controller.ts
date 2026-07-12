@@ -35,6 +35,7 @@ export class ArticleController {
   constructor(private readonly articleService: ArticleService) {}
 
   @Get()
+  @RequirePermissions('article:view')
   async list(
     @Query() queryDto: ArticleQueryDto,
   ): Promise<PaginatedData<Article>> {
@@ -42,6 +43,7 @@ export class ArticleController {
   }
 
   @Get(':id')
+  @RequirePermissions('article:view')
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<Article> {
     const article = await this.articleService.findOneWithCategory(id)
     if (!article) {
@@ -51,6 +53,7 @@ export class ArticleController {
   }
 
   @Post()
+  @RequirePermissions('article:create')
   async create(
     @Body(new I18nValidationPipe({ transform: true }))
     createDto: ArticleCreateDto,
@@ -60,6 +63,7 @@ export class ArticleController {
   }
 
   @Put(':id')
+  @RequirePermissions('article:edit')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: ArticleUpdateDto,
@@ -69,6 +73,7 @@ export class ArticleController {
   }
 
   @Post(':id/submit')
+  @RequirePermissions('article:submit')
   submit(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: AuthUser,
@@ -96,6 +101,7 @@ export class ArticleController {
   }
 
   @Post(':id/withdraw')
+  @RequirePermissions('article:withdraw')
   withdraw(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: AuthUser,
@@ -113,6 +119,7 @@ export class ArticleController {
   }
 
   @Delete(':id')
+  @RequirePermissions('article:delete')
   async delete(@Param('id', ParseIntPipe) id: number): Promise<null> {
     await this.findOne(id)
     await this.articleService.delete(id)
