@@ -21,7 +21,7 @@ export class RoleController {
   constructor(private readonly roleService: RoleService) {}
 
   @Get()
-  @RequirePermissions('role:view')
+  @RequirePermissions('role:list')
   async list(@Query() queryDto: RoleQueryDto): Promise<PaginatedData<Role>> {
     return this.roleService.findAll(queryDto)
   }

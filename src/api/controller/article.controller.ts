@@ -35,7 +35,7 @@ export class ArticleController {
   constructor(private readonly articleService: ArticleService) {}
 
   @Get()
-  @RequirePermissions('article:view')
+  @RequirePermissions('article:list')
   async list(
     @Query() queryDto: ArticleQueryDto,
   ): Promise<PaginatedData<Article>> {

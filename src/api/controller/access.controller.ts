@@ -21,7 +21,7 @@ export class AccessController {
   constructor(private readonly accessService: AccessService) {}
 
   @Get()
-  @RequirePermissions('access:view')
+  @RequirePermissions('access:list')
   async list(
     @Query() queryDto: AccessQueryDto,
   ): Promise<PaginatedData<Access>> {
@@ -29,7 +29,7 @@ export class AccessController {
   }
 
   @Get('tree')
-  @RequirePermissions('access:view')
+  @RequirePermissions('access:list')
   async tree(): Promise<Access[]> {
     return this.accessService.findTree()
   }

@@ -22,7 +22,7 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  @RequirePermissions('user:view')
+  @RequirePermissions('user:list')
   async list(
     @Query() userQueryDto: UserQueryDto,
   ): Promise<PaginatedData<User>> {

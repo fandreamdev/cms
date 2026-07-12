@@ -31,7 +31,7 @@ export class TagController {
   constructor(private readonly tagService: TagService) {}
 
   @Get()
-  @RequirePermissions('tag:view')
+  @RequirePermissions('tag:list')
   async list(@Query() queryDto: TagQueryDto): Promise<PaginatedData<Tag>> {
     return this.tagService.findAll(queryDto)
   }

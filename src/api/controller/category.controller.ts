@@ -31,7 +31,7 @@ export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
   @Get()
-  @RequirePermissions('category:view')
+  @RequirePermissions('category:list')
   async list(
     @Query() queryDto: CategoryQueryDto,
   ): Promise<PaginatedData<Category>> {
@@ -39,7 +39,7 @@ export class CategoryController {
   }
 
   @Get('tree')
-  @RequirePermissions('category:view')
+  @RequirePermissions('category:list')
   async tree(): Promise<Category[]> {
     return this.categoryService.findTree()
   }

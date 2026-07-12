@@ -229,6 +229,7 @@ const accessTree: AccessSeedNode[] = [
         url: '/admin/system/users',
         description: '用户管理',
         children: createFeatureNodes('user', [
+          'list',
           'create',
           'view',
           'edit',
@@ -240,6 +241,7 @@ const accessTree: AccessSeedNode[] = [
         url: '/admin/system/roles',
         description: '角色管理',
         children: createFeatureNodes('role', [
+          'list',
           'create',
           'view',
           'edit',
@@ -251,6 +253,7 @@ const accessTree: AccessSeedNode[] = [
         url: '/admin/system/accesses',
         description: '菜单管理',
         children: createFeatureNodes('access', [
+          'list',
           'create',
           'view',
           'edit',
@@ -269,6 +272,7 @@ const accessTree: AccessSeedNode[] = [
         url: '/admin/content/articles',
         description: '文章管理',
         children: createFeatureNodes('article', [
+          'list',
           'create',
           'view',
           'edit',
@@ -283,6 +287,7 @@ const accessTree: AccessSeedNode[] = [
         url: '/admin/content/categories',
         description: '分类管理',
         children: createFeatureNodes('category', [
+          'list',
           'create',
           'view',
           'edit',
@@ -294,6 +299,7 @@ const accessTree: AccessSeedNode[] = [
         url: '/admin/content/tags',
         description: '标签管理',
         children: createFeatureNodes('tag', [
+          'list',
           'create',
           'view',
           'edit',
@@ -413,6 +419,7 @@ async function assignContentReviewer(
     [
       '/admin/reviews',
       '/admin/reviews/articles',
+      'article:list',
       'article:view',
       'article:approve',
       'article:status',
