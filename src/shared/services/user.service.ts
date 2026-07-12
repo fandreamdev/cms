@@ -9,6 +9,7 @@ import { User } from '../entities/user.entity'
 import { DataSource, FindOptionsOrder, In, Repository } from 'typeorm'
 import { BaseService } from './base.service'
 import { Role } from '../entities/role.entity'
+import type { AuthUser } from '../../auth/auth-user'
 
 export type UserCreatePayload = Omit<
   User,
@@ -44,6 +45,33 @@ export class UserService extends BaseService<User> {
       .where('user.id = :id', { id })
       .orderBy('role.id', 'ASC')
       .getOne()
+  }
+
+  async findForLogin(username: string): Promise<AuthUser | null> {
+    const user = await this.repository.findOne({
+      where: { username },
+      relations: { roles: { accesses: true } },
+    })
+    return user ? this.toAuthUser(user) : null
+  }
+
+  async findForAuthentication(id: number): Promise<AuthUser | null> {
+    const user = await this.repository.findOne({
+      where: { id },
+      relations: { roles: { accesses: true } },
+    })
+    return user ? this.toAuthUser(user) : null
+  }
+
+  private toAuthUser(user: User): AuthUser {
+    const permissions = [
+      ...new Set(
+        user.roles.flatMap((role) =>
+          role.accesses.map((access) => access.url).filter(Boolean),
+        ),
+      ),
+    ]
+    return Object.assign(user, { permissions })
   }
 
   async createWithRoles(payload: UserCreatePayload): Promise<User> {

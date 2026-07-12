@@ -5,9 +5,10 @@ import { ApiModule } from './api/api.module'
 import { SharedModule } from './shared/shared.module'
 import { LoggerModule } from './shared/logger/logger.module'
 import { I18Module } from './shared/i18n/i18.module'
+import { AuthModule } from './auth/auth.module'
 
 @Module({
-  imports: [LoggerModule, ApiModule, SharedModule, I18Module],
+  imports: [LoggerModule, SharedModule, AuthModule, ApiModule, I18Module],
   controllers: [AppController],
   providers: [AppService],
 })
