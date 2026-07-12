@@ -207,50 +207,111 @@ const userProfiles = [
   ['disabled_user', '13900000017', 'disabled.user@example.com', false],
 ] satisfies [string, string, string, boolean][]
 
+function createFeatureNodes(
+  resource: string,
+  actions: string[],
+): AccessSeedNode[] {
+  return actions.map((action) => ({
+    type: AccessType.FEATURE,
+    url: `${resource}:${action}`,
+    description: `${resource}:${action}`,
+  }))
+}
+
 const accessTree: AccessSeedNode[] = [
   {
     type: AccessType.MODULE,
-    url: '/system',
+    url: '/admin/system',
     description: '系统模块',
     children: [
       {
         type: AccessType.MENU,
-        url: '/system/users',
+        url: '/admin/system/users',
         description: '用户管理',
+        children: createFeatureNodes('user', [
+          'create',
+          'view',
+          'edit',
+          'delete',
+        ]),
       },
       {
         type: AccessType.MENU,
-        url: '/system/roles',
+        url: '/admin/system/roles',
         description: '角色管理',
+        children: createFeatureNodes('role', [
+          'create',
+          'view',
+          'edit',
+          'delete',
+        ]),
       },
       {
         type: AccessType.MENU,
-        url: '/system/accesses',
+        url: '/admin/system/accesses',
         description: '菜单管理',
+        children: createFeatureNodes('access', [
+          'create',
+          'view',
+          'edit',
+          'delete',
+        ]),
       },
     ],
   },
   {
     type: AccessType.MODULE,
-    url: '/content',
+    url: '/admin/content',
     description: '内容模块',
     children: [
       {
         type: AccessType.MENU,
-        url: '/content/articles',
+        url: '/admin/content/articles',
         description: '文章管理',
-        children: [
-          {
-            type: AccessType.FEATURE,
-            url: 'article:approve',
-            description: '文章审核',
-          },
-          {
-            type: AccessType.FEATURE,
-            url: 'article:status',
-            description: '文章上下架',
-          },
-        ],
+        children: createFeatureNodes('article', [
+          'create',
+          'view',
+          'edit',
+          'delete',
+          'submit',
+          'withdraw',
+          'status',
+        ]),
+      },
+      {
+        type: AccessType.MENU,
+        url: '/admin/content/categories',
+        description: '分类管理',
+        children: createFeatureNodes('category', [
+          'create',
+          'view',
+          'edit',
+          'delete',
+        ]),
+      },
+      {
+        type: AccessType.MENU,
+        url: '/admin/content/tags',
+        description: '标签管理',
+        children: createFeatureNodes('tag', [
+          'create',
+          'view',
+          'edit',
+          'delete',
+        ]),
+      },
+    ],
+  },
+  {
+    type: AccessType.MODULE,
+    url: '/admin/reviews',
+    description: '审核模块',
+    children: [
+      {
+        type: AccessType.MENU,
+        url: '/admin/reviews/articles',
+        description: '文章审核',
+        children: createFeatureNodes('article', ['approve']),
       },
     ],
   },
@@ -299,8 +360,6 @@ async function seed(app: INestApplicationContext): Promise<void> {
       'categories',
     ])
   }
-  await resetTables(dataSource, ['accesses'])
-
   const password = await hashPassword('Test@123456')
   const savedRoles = await saveRoles(roleRepository)
   const savedUsers = await saveUsers(userRepository, password)
@@ -352,8 +411,9 @@ async function assignContentReviewer(
 
   role.accesses = savedAccesses.filter((access) =>
     [
-      '/content',
-      '/content/articles',
+      '/admin/reviews',
+      '/admin/reviews/articles',
+      'article:view',
       'article:approve',
       'article:status',
     ].includes(access.url),
@@ -527,13 +587,15 @@ async function saveAccessTree(
   const saved: Access[] = []
 
   for (const node of nodes) {
+    const existing = await repository.findOne({ where: { url: node.url } })
+    const values = {
+      type: node.type,
+      url: node.url,
+      description: node.description,
+      parent: parent ?? null,
+    }
     const current = await repository.save(
-      repository.create({
-        type: node.type,
-        url: node.url,
-        description: node.description,
-        ...(parent ? { parent } : {}),
-      }),
+      existing ? repository.merge(existing, values) : repository.create(values),
     )
     saved.push(current)
 
