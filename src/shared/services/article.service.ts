@@ -1,16 +1,26 @@
 import {
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { DeepPartial, FindOptionsOrder, In, Repository } from 'typeorm'
+import {
+  DataSource,
+  DeepPartial,
+  FindOptionsOrder,
+  In,
+  Repository,
+} from 'typeorm'
 import { ArticleCreateDto, ArticleUpdateDto } from '../../api/dto'
 import { ArticleQueryDto } from '../../api/dto/article/article-query.dto'
 import { Article } from '../entities/article.entity'
 import { Category } from '../entities/category.entity'
 import { Tag } from '../entities/tag.entity'
+import { User } from '../entities/user.entity'
+import { ArticleApprovalStatus } from '../enum/article-approval-status.enum'
 import { BaseService, PaginatedResult } from './base.service'
 
 @Injectable()
@@ -25,6 +35,7 @@ export class ArticleService extends BaseService<Article> {
     private readonly categoryRepository: Repository<Category>,
     @InjectRepository(Tag)
     private readonly tagRepository: Repository<Tag>,
+    private readonly dataSource: DataSource,
   ) {
     super(repository)
   }
@@ -42,7 +53,7 @@ export class ArticleService extends BaseService<Article> {
     }
     const [list, total] = await this.repository.findAndCount({
       where,
-      relations: { category: true, tags: true },
+      relations: { category: true, tags: true, author: true, reviewer: true },
       order: this.defaultOrder,
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -59,11 +70,14 @@ export class ArticleService extends BaseService<Article> {
   async findOneWithCategory(id: number): Promise<Article | null> {
     return this.repository.findOne({
       where: { id },
-      relations: { category: true, tags: true },
+      relations: { category: true, tags: true, author: true, reviewer: true },
     })
   }
 
-  async createWithCategory(createDto: ArticleCreateDto): Promise<Article> {
+  async createWithCategory(
+    createDto: ArticleCreateDto,
+    author: User,
+  ): Promise<Article> {
     const { categoryId, tagIds, ...values } = createDto
     const category = await this.resolveCategory(categoryId)
     const tags = await this.resolveTags(tagIds ?? [])
@@ -71,6 +85,9 @@ export class ArticleService extends BaseService<Article> {
       ...values,
       category,
       tags,
+      author,
+      approvalStatus: ArticleApprovalStatus.DRAFT,
+      rejectionReason: null,
     } as DeepPartial<Article>)
     const saved = await this.repository.save(article)
     return (await this.findOneWithCategory(saved.id)) as Article
@@ -79,9 +96,17 @@ export class ArticleService extends BaseService<Article> {
   async updateWithCategory(
     id: number,
     updateDto: ArticleUpdateDto,
+    userId: number,
   ): Promise<Article> {
     const article = await this.findOneWithCategory(id)
     if (!article) throw new NotFoundException('Article not found')
+    this.assertAuthor(article, userId)
+    if (
+      article.approvalStatus === ArticleApprovalStatus.PENDING ||
+      article.approvalStatus === ArticleApprovalStatus.WITHDRAWN
+    ) {
+      throw new ConflictException('审批中或已撤回的文章不能编辑')
+    }
 
     const { categoryId, tagIds, ...values } = updateDto
     Object.assign(article, values)
@@ -91,7 +116,82 @@ export class ArticleService extends BaseService<Article> {
     if (tagIds !== undefined) {
       article.tags = await this.resolveTags(tagIds)
     }
+    if (
+      article.approvalStatus === ArticleApprovalStatus.APPROVED ||
+      article.approvalStatus === ArticleApprovalStatus.REJECTED
+    ) {
+      article.approvalStatus = ArticleApprovalStatus.PENDING
+      article.submittedAt = new Date()
+      article.reviewedAt = null
+      article.reviewer = null
+      article.rejectionReason = null
+    }
     await this.repository.save(article)
+    return (await this.findOneWithCategory(id)) as Article
+  }
+
+  async submit(id: number, userId: number): Promise<Article> {
+    await this.withLockedArticle(id, (article) => {
+      this.assertAuthor(article, userId)
+      if (
+        ![
+          ArticleApprovalStatus.DRAFT,
+          ArticleApprovalStatus.APPROVED,
+          ArticleApprovalStatus.REJECTED,
+        ].includes(article.approvalStatus)
+      ) {
+        throw new ConflictException('当前状态不能提交审批')
+      }
+      article.approvalStatus = ArticleApprovalStatus.PENDING
+      article.rejectionReason = null
+      article.submittedAt = new Date()
+      article.reviewedAt = null
+      article.reviewer = null
+    })
+    return (await this.findOneWithCategory(id)) as Article
+  }
+
+  async approve(id: number, reviewer: User): Promise<Article> {
+    const title = await this.withLockedArticle(id, (article) => {
+      this.assertPending(article)
+      article.approvalStatus = ArticleApprovalStatus.APPROVED
+      article.rejectionReason = null
+      article.reviewedAt = new Date()
+      article.publishedAt = new Date()
+      article.reviewer = reviewer
+      return article.title
+    })
+    this.logger.log(`文章[${title}]已发布`)
+    return (await this.findOneWithCategory(id)) as Article
+  }
+
+  async reject(id: number, reason: string, reviewer: User): Promise<Article> {
+    await this.withLockedArticle(id, (article) => {
+      this.assertPending(article)
+      article.approvalStatus = ArticleApprovalStatus.REJECTED
+      article.rejectionReason = reason.trim()
+      article.reviewedAt = new Date()
+      article.reviewer = reviewer
+    })
+    return (await this.findOneWithCategory(id)) as Article
+  }
+
+  async withdraw(id: number, userId: number): Promise<Article> {
+    const title = await this.withLockedArticle(id, (article) => {
+      this.assertAuthor(article, userId)
+      this.assertPending(article)
+      article.approvalStatus = ArticleApprovalStatus.WITHDRAWN
+      article.rejectionReason = null
+      return article.title
+    })
+    this.logger.log(`文章[${title}]已撤回`)
+    return (await this.findOneWithCategory(id)) as Article
+  }
+
+  async setStatus(id: number, status: number): Promise<Article> {
+    await this.withLockedArticle(id, (article) => {
+      article.status = status
+    })
     return (await this.findOneWithCategory(id)) as Article
   }
 
@@ -110,5 +210,35 @@ export class ArticleService extends BaseService<Article> {
       throw new BadRequestException('部分标签不存在')
     }
     return tags
+  }
+
+  private assertAuthor(article: Article, userId: number): void {
+    if (article.authorId !== userId) {
+      throw new ForbiddenException('只有文章作者可以执行此操作')
+    }
+  }
+
+  private assertPending(article: Article): void {
+    if (article.approvalStatus !== ArticleApprovalStatus.PENDING) {
+      throw new ConflictException('只有审批中的文章可以执行此操作')
+    }
+  }
+
+  private async withLockedArticle<T>(
+    id: number,
+    action: (article: Article) => Promise<T> | T,
+  ): Promise<T> {
+    return this.dataSource.transaction(async (manager) => {
+      const repository = manager.getRepository(Article)
+      const article = await repository.findOne({
+        where: { id },
+        relations: { author: true, reviewer: true },
+        lock: { mode: 'pessimistic_write' },
+      })
+      if (!article) throw new NotFoundException('Article not found')
+      const result = await action(article)
+      await repository.save(article)
+      return result
+    })
   }
 }

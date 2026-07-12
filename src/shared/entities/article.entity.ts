@@ -12,6 +12,8 @@ import {
 } from 'typeorm'
 import { Tag } from './tag.entity'
 import { Category } from './category.entity'
+import { User } from './user.entity'
+import { ArticleApprovalStatus } from '../enum/article-approval-status.enum'
 
 @Entity('articles')
 export class Article {
@@ -38,8 +40,8 @@ export class Article {
 
   @Column({
     type: 'tinyint',
-    default: 0,
-    comment: '发布状态：0草稿，1已发布',
+    default: 1,
+    comment: '是否有效：0失效，1有效',
   })
   status!: number
 
@@ -53,6 +55,44 @@ export class Article {
 
   @Column({ type: 'int', default: 100, comment: '排序字段' })
   sort!: number
+
+  @Column({
+    name: 'approval_status',
+    type: 'enum',
+    enum: ArticleApprovalStatus,
+    default: ArticleApprovalStatus.DRAFT,
+    comment: '审批状态',
+  })
+  approvalStatus!: ArticleApprovalStatus
+
+  @Column({
+    name: 'rejection_reason',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+    comment: '审批拒绝理由',
+  })
+  rejectionReason!: string | null
+
+  @Column({ name: 'submitted_at', type: 'timestamp', nullable: true })
+  submittedAt!: Date | null
+
+  @Column({ name: 'reviewed_at', type: 'timestamp', nullable: true })
+  reviewedAt!: Date | null
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'author_id' })
+  author!: User | null
+
+  @RelationId((article: Article) => article.author)
+  authorId!: number | null
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'reviewer_id' })
+  reviewer!: User | null
+
+  @RelationId((article: Article) => article.reviewer)
+  reviewerId!: number | null
 
   @ManyToMany(() => Tag, (tag) => tag.articles)
   @JoinTable({

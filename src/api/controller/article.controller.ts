@@ -22,6 +22,11 @@ import {
   TransformInterceptor,
 } from '../common'
 import { Article } from '../../shared/entities/article.entity'
+import { CurrentUser } from '../../auth/current-user.decorator'
+import { RequirePermissions } from '../../auth/permissions.decorator'
+import type { AuthUser } from '../../auth/auth-user'
+import { ArticleRejectDto } from '../dto/article/article-reject.dto'
+import { ArticleStatusDto } from '../dto/article/article-status.dto'
 
 @Controller('api/articles')
 @UseInterceptors(TransformInterceptor)
@@ -49,16 +54,62 @@ export class ArticleController {
   async create(
     @Body(new I18nValidationPipe({ transform: true }))
     createDto: ArticleCreateDto,
+    @CurrentUser() user: AuthUser,
   ): Promise<Article> {
-    return this.articleService.createWithCategory(createDto)
+    return this.articleService.createWithCategory(createDto, user)
   }
 
   @Put(':id')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: ArticleUpdateDto,
+    @CurrentUser() user: AuthUser,
   ): Promise<Article> {
-    return this.articleService.updateWithCategory(id, updateDto)
+    return this.articleService.updateWithCategory(id, updateDto, user.id)
+  }
+
+  @Post(':id/submit')
+  submit(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthUser,
+  ): Promise<Article> {
+    return this.articleService.submit(id, user.id)
+  }
+
+  @Post(':id/approve')
+  @RequirePermissions('article:approve')
+  approve(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthUser,
+  ): Promise<Article> {
+    return this.articleService.approve(id, user)
+  }
+
+  @Post(':id/reject')
+  @RequirePermissions('article:approve')
+  reject(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ArticleRejectDto,
+    @CurrentUser() user: AuthUser,
+  ): Promise<Article> {
+    return this.articleService.reject(id, dto.reason, user)
+  }
+
+  @Post(':id/withdraw')
+  withdraw(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthUser,
+  ): Promise<Article> {
+    return this.articleService.withdraw(id, user.id)
+  }
+
+  @Put(':id/status')
+  @RequirePermissions('article:status')
+  setStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ArticleStatusDto,
+  ): Promise<Article> {
+    return this.articleService.setStatus(id, dto.status)
   }
 
   @Delete(':id')

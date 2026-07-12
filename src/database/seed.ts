@@ -230,6 +230,30 @@ const accessTree: AccessSeedNode[] = [
       },
     ],
   },
+  {
+    type: AccessType.MODULE,
+    url: '/content',
+    description: '内容模块',
+    children: [
+      {
+        type: AccessType.MENU,
+        url: '/content/articles',
+        description: '文章管理',
+        children: [
+          {
+            type: AccessType.FEATURE,
+            url: 'article:approve',
+            description: '文章审核',
+          },
+          {
+            type: AccessType.FEATURE,
+            url: 'article:status',
+            description: '文章上下架',
+          },
+        ],
+      },
+    ],
+  },
 ]
 
 async function bootstrap(): Promise<void> {
@@ -281,6 +305,13 @@ async function seed(app: INestApplicationContext): Promise<void> {
   const savedRoles = await saveRoles(roleRepository)
   const savedUsers = await saveUsers(userRepository, password)
   const savedAccesses = await saveAccessTree(accessRepository, accessTree)
+  await assignContentReviewer(
+    roleRepository,
+    userRepository,
+    savedRoles,
+    savedUsers,
+    savedAccesses,
+  )
   const savedTags = await saveTags(tagRepository)
   const savedCategories = await saveCategoryTree(
     categoryRepository,
@@ -290,6 +321,7 @@ async function seed(app: INestApplicationContext): Promise<void> {
     articleRepository,
     savedTags,
     savedCategories,
+    savedUsers,
   )
 
   console.log(
@@ -305,6 +337,31 @@ async function seed(app: INestApplicationContext): Promise<void> {
       process.argv.includes('--reset') ? 'Mode: reset' : 'Mode: upsert',
     ].join('\n'),
   )
+}
+
+async function assignContentReviewer(
+  roleRepository: Repository<Role>,
+  userRepository: Repository<User>,
+  savedRoles: Role[],
+  savedUsers: User[],
+  savedAccesses: Access[],
+): Promise<void> {
+  const role = savedRoles.find((item) => item.name === '内容管理员')
+  const user = savedUsers.find((item) => item.username === 'content_manager')
+  if (!role || !user) throw new Error('Content reviewer seed data not found')
+
+  role.accesses = savedAccesses.filter((access) =>
+    [
+      '/content',
+      '/content/articles',
+      'article:approve',
+      'article:status',
+    ].includes(access.url),
+  )
+  await roleRepository.save(role)
+
+  user.roles = [role]
+  await userRepository.save(user)
 }
 
 async function saveTags(repository: Repository<Tag>): Promise<Tag[]> {
@@ -328,12 +385,15 @@ async function saveArticles(
   repository: Repository<Article>,
   savedTags: Tag[],
   savedCategories: Category[],
+  savedUsers: User[],
 ): Promise<Article[]> {
   const saved: Article[] = []
   const tagMap = new Map(savedTags.map((tag) => [tag.name, tag]))
   const categoryMap = new Map(
     savedCategories.map((category) => [category.name, category]),
   )
+  const author = savedUsers.find((user) => user.username === 'admin')
+  if (!author) throw new Error('Seed admin user not found')
 
   for (const { tagNames, categoryName, ...payload } of articles) {
     const existing = await repository.findOne({
@@ -348,8 +408,12 @@ async function saveArticles(
     const category = categoryMap.get(categoryName)
     if (!category) throw new Error(`Seed category not found: ${categoryName}`)
     const article = existing
-      ? repository.merge(existing, payload, { tags: articleTags, category })
-      : repository.create({ ...payload, tags: articleTags, category })
+      ? repository.merge(existing, payload, {
+          tags: articleTags,
+          category,
+          author,
+        })
+      : repository.create({ ...payload, tags: articleTags, category, author })
     saved.push(await repository.save(article))
   }
 

@@ -9,8 +9,14 @@ import {
 } from 'class-validator'
 import { EmptyStringToUndefined } from '../../../shared/decorator/empty-string-to-undefined.decorator'
 import { PaginationDto } from '../pagination.dto'
+import { ArticleApprovalStatus } from '../../../shared/enum/article-approval-status.enum'
+import { IsEnum } from 'class-validator'
 
 export class ArticleQueryDto extends PaginationDto {
+  @IsOptional()
+  @IsEnum(ArticleApprovalStatus)
+  approvalStatus?: ArticleApprovalStatus
+
   @IsOptional()
   @Type(() => Number)
   @IsInt()

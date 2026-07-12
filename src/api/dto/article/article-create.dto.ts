@@ -1,7 +1,7 @@
 import { Type } from 'class-transformer'
 import {
   IsArray,
-  IsDate,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -41,13 +41,9 @@ export class ArticleCreateDto {
 
   @IsOptional()
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
+  @IsIn([0, 1])
   status?: number
-
-  @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  publishedAt?: Date | null
 
   @IsOptional()
   @Type(() => Number)
