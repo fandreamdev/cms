@@ -18,8 +18,8 @@ import { SystemModule } from '../modules/system/system.module'
       useFactory: (configService: ConfigService<AppConfigType>) => {
         const config = configService.get<AuthConfigType>('auth')
         return {
-          secret: config?.jwtSecret,
-          signOptions: { expiresIn: config?.jwtExpiresIn ?? 7200 },
+          secret: config?.accessTokenSecret,
+          signOptions: { expiresIn: config?.accessTokenExpiresIn ?? 7200 },
         }
       },
     }),
