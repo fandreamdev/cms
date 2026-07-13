@@ -1,5 +1,8 @@
 # 登录认证与文章审批接口
 
+双 Token 的完整设计与安全注意事项见
+[`dual-token-auth-design.md`](./dual-token-auth-design.md)。
+
 ## 1. JWT 配置
 
 服务启动前必须配置：
@@ -7,9 +10,14 @@
 ```env
 JWT_SECRET=至少32位随机字符串
 JWT_EXPIRES_IN=7200
+JWT_ACCESS_SECRET=accessToken专用的至少32位随机字符串
+JWT_ACCESS_EXPIRES_IN=900
+JWT_REFRESH_SECRET=refreshToken专用的至少32位随机字符串
+JWT_REFRESH_EXPIRES_IN=604800
 ```
 
-除登录接口和根路径外，API 默认要求 Bearer Token。
+新配置未提供时会兼容旧的 `JWT_SECRET` 和 `JWT_EXPIRES_IN`。生产环境推荐使用两个
+不同的专用密钥。除登录、刷新接口和根路径外，API 默认要求 accessToken。
 
 ## 2. 登录
 
@@ -33,6 +41,7 @@ Content-Type: application/json
   "message": "success",
   "data": {
     "accessToken": "JWT",
+    "refreshToken": "JWT",
     "user": {
       "id": 1,
       "username": "admin",
@@ -47,6 +56,21 @@ Content-Type: application/json
 ```http
 Authorization: Bearer <accessToken>
 ```
+
+刷新 Token：
+
+```http
+POST /api/auth/refresh
+Content-Type: application/json
+```
+
+```json
+{
+  "refreshToken": "JWT"
+}
+```
+
+刷新成功会返回新的一对 Token 和最新用户权限；旧 Token 应由客户端立即替换。
 
 获取当前用户：
 

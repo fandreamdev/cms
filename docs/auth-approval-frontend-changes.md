@@ -5,7 +5,7 @@
 本次前端需要完成：
 
 1. 新增登录页面和当前用户状态管理。
-2. 所有后台 API 请求携带 JWT。
+2. 所有后台 API 请求携带 accessToken，并使用 refreshToken 自动续期。
 3. 统一处理 HTTP 401 和 403。
 4. 文章列表新增审批状态、作者、审核员和拒绝理由展示。
 5. 根据文章状态、当前用户和权限控制操作按钮。
@@ -19,6 +19,7 @@
 
 ```text
 POST /api/auth/login
+POST /api/auth/refresh
 GET  /
 ```
 
@@ -50,6 +51,7 @@ Content-Type: application/json
   "message": "success",
   "data": {
     "accessToken": "JWT",
+    "refreshToken": "JWT",
     "user": {
       "id": 1,
       "username": "admin",
@@ -67,6 +69,8 @@ GET /api/auth/me
 ```
 
 页面刷新后，如果本地存在 Token，应调用该接口恢复用户信息并验证 Token 是否仍有效。
+accessToken 过期时使用刷新接口轮换两个 Token，详细实现见
+`docs/dual-token-frontend-changes.md`。
 
 ### 2.3 前端用户类型
 
@@ -105,7 +109,7 @@ http.interceptors.request.use((config) => {
 
 响应处理：
 
-- HTTP `401`：清除登录信息并跳转登录页。
+- HTTP `401`：accessToken 失效时先尝试刷新；刷新失败后清除登录信息并跳转登录页。
 - HTTP `403`：保留登录状态，提示“没有访问权限”。
 - HTTP `409`：提示当前文章状态已变化，并刷新文章数据。
 
@@ -116,6 +120,7 @@ http.interceptors.request.use((config) => {
 ```ts
 interface AuthState {
   accessToken: string | null
+  refreshToken: string | null
   user: CurrentUser | null
   initialized: boolean
 }
