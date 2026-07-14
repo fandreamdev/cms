@@ -1,15 +1,16 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import OSS from 'ali-oss'
 import { randomUUID } from 'crypto'
 import { mkdir, writeFile } from 'fs/promises'
 import { extname, join, posix, resolve } from 'path'
 import sharp from 'sharp'
-import { AppConfigType, UploadConfigType } from '../config'
+import { uploadConfig } from '../config'
+import type { UploadConfigType } from '../config'
 
 const IMAGE_TYPES = {
   'image/jpeg': '.jpg',
@@ -20,13 +21,10 @@ const IMAGE_TYPES = {
 
 @Injectable()
 export class UploadService {
-  private readonly config: UploadConfigType
-
-  constructor(configService: ConfigService<AppConfigType>) {
-    this.config = configService.get<UploadConfigType>(
-      'upload',
-    ) as UploadConfigType
-  }
+  constructor(
+    @Inject(uploadConfig.KEY)
+    private readonly config: UploadConfigType,
+  ) {}
 
   async saveImage(file: Express.Multer.File): Promise<{ url: string }> {
     const extension = this.validateImage(file)

@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common'
-import { ConfigModule, ConfigService } from '@nestjs/config'
-import { TypeOrmModule } from '@nestjs/typeorm'
+import { ConfigModule } from '@nestjs/config'
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm'
 import config, {
-  AppConfigType,
+  databaseConfig,
   DatabaseConfigType,
   appConfigSchema,
 } from '../shared/config'
@@ -16,9 +16,9 @@ import config, {
       validationSchema: appConfigSchema,
     }),
     TypeOrmModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService<AppConfigType>) =>
-        configService.get<DatabaseConfigType>('database') ?? {},
+      inject: [databaseConfig.KEY],
+      useFactory: (database: DatabaseConfigType) =>
+        database as TypeOrmModuleOptions,
     }),
   ],
 })

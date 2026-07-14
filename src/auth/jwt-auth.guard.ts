@@ -1,17 +1,18 @@
 import {
   CanActivate,
   ExecutionContext,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
-import { ConfigService } from '@nestjs/config'
 import { Reflector } from '@nestjs/core'
 import { Request } from 'express'
 import { UserService } from '../shared/services/user.service'
 import type { AuthUser } from './auth-user'
 import { IS_PUBLIC_KEY } from './public.decorator'
-import { AppConfigType, AuthConfigType } from '../shared/config'
+import { authConfig } from '../shared/config'
+import type { AuthConfigType } from '../shared/config'
 import { TokenPayload } from './token-payload'
 
 @Injectable()
@@ -20,12 +21,9 @@ export class JwtAuthGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly jwtService: JwtService,
     private readonly userService: UserService,
-    configService: ConfigService<AppConfigType>,
-  ) {
-    this.config = configService.get<AuthConfigType>('auth') as AuthConfigType
-  }
-
-  private readonly config: AuthConfigType
+    @Inject(authConfig.KEY)
+    private readonly config: AuthConfigType,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
@@ -51,7 +49,7 @@ export class JwtAuthGuard implements CanActivate {
         typeof payload.jti !== 'string' ||
         !payload.jti
       ) {
-        throw new UnauthorizedException('Token 类型或负载无效')
+        throw new UnauthorizedException('令牌类型或负载无效')
       }
       const user = await this.userService.findForAuthentication(payload.sub)
       if (!user || user.status !== 1) {

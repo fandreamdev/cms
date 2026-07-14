@@ -1,8 +1,8 @@
 import { Global, Module } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import { APP_GUARD } from '@nestjs/core'
 import { JwtModule } from '@nestjs/jwt'
-import { AppConfigType, AuthConfigType } from '../shared/config'
+import { authConfig } from '../shared/config'
+import type { AuthConfigType } from '../shared/config'
 import { AuthController } from './auth.controller'
 import { JwtAuthGuard } from './jwt-auth.guard'
 import { PermissionsGuard } from './permissions.guard'
@@ -14,14 +14,11 @@ import { SystemModule } from '../modules/system/system.module'
   imports: [
     SystemModule,
     JwtModule.registerAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService<AppConfigType>) => {
-        const config = configService.get<AuthConfigType>('auth')
-        return {
-          secret: config?.accessTokenSecret,
-          signOptions: { expiresIn: config?.accessTokenExpiresIn ?? 7200 },
-        }
-      },
+      inject: [authConfig.KEY],
+      useFactory: (config: AuthConfigType) => ({
+        secret: config.accessTokenSecret,
+        signOptions: { expiresIn: config.accessTokenExpiresIn ?? 7200 },
+      }),
     }),
   ],
   controllers: [AuthController],

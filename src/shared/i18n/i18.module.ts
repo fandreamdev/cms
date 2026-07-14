@@ -1,15 +1,13 @@
 import { Module } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n'
 import * as path from 'path'
-import { AppConfigType } from '../config'
+import { i18nConfig, I18nConfigType } from '../config'
 @Module({
   imports: [
     I18nModule.forRootAsync({
-      useFactory: (configService: ConfigService<AppConfigType>) => {
-        const i18nConfig = configService.getOrThrow('i18n', { infer: true })
+      useFactory: (config: I18nConfigType) => {
         return {
-          ...i18nConfig,
+          ...config,
           loaderOptions: {
             path: path.join(__dirname, '../../i18n/'),
             watch: true,
@@ -20,7 +18,7 @@ import { AppConfigType } from '../config'
         { use: QueryResolver, options: ['lang', 'l'] },
         AcceptLanguageResolver,
       ],
-      inject: [ConfigService],
+      inject: [i18nConfig.KEY],
     }),
   ],
   exports: [I18nModule],

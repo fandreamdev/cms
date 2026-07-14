@@ -1,8 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common'
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
-import { ConfigService } from '@nestjs/config'
 import { randomUUID } from 'crypto'
-import { AppConfigType, AuthConfigType } from '../shared/config'
+import { authConfig } from '../shared/config'
+import type { AuthConfigType } from '../shared/config'
 import { UserService } from '../shared/services/user.service'
 import { checkPassword } from '../shared/utils/pwd'
 import { AuthUser } from './auth-user'
@@ -22,12 +22,9 @@ export class AuthService {
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
-    configService: ConfigService<AppConfigType>,
-  ) {
-    this.config = configService.get<AuthConfigType>('auth') as AuthConfigType
-  }
-
-  private readonly config: AuthConfigType
+    @Inject(authConfig.KEY)
+    private readonly config: AuthConfigType,
+  ) {}
 
   async login(username: string, password: string): Promise<AuthResult> {
     const user = await this.userService.findForLogin(username)
@@ -87,7 +84,7 @@ export class AuthService {
       typeof payload.jti !== 'string' ||
       !payload.jti
     ) {
-      throw new UnauthorizedException('Token 类型或负载无效')
+      throw new UnauthorizedException('令牌类型或负载无效')
     }
   }
 }
