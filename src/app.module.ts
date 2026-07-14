@@ -8,6 +8,8 @@ import { InfrastructureModule } from './infrastructure/infrastructure.module'
 import { ContentModule } from './modules/content/content.module'
 import { SystemModule } from './modules/system/system.module'
 import { UploadModule } from './modules/upload/upload.module'
+import { EventEmitterModule } from '@nestjs/event-emitter'
+import { NotificationModule } from './modules/notification/notification.module'
 
 @Module({
   imports: [
@@ -18,6 +20,12 @@ import { UploadModule } from './modules/upload/upload.module'
     ContentModule,
     UploadModule,
     I18Module,
+    EventEmitterModule.forRoot({
+      wildcard: true,
+      delimiter: '.',
+      global: true,
+    }),
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

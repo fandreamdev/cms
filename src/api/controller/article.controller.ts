@@ -47,7 +47,7 @@ export class ArticleController {
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<Article> {
     const article = await this.articleService.findOneWithCategory(id)
     if (!article) {
-      throw new NotFoundException('Article not found')
+      throw new NotFoundException('文章不存在')
     }
     return article
   }
@@ -120,9 +120,11 @@ export class ArticleController {
 
   @Delete(':id')
   @RequirePermissions('article:delete')
-  async delete(@Param('id', ParseIntPipe) id: number): Promise<null> {
-    await this.findOne(id)
-    await this.articleService.delete(id)
+  async delete(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthUser,
+  ): Promise<null> {
+    await this.articleService.deleteByAuthor(id, user.id)
     return null
   }
 }

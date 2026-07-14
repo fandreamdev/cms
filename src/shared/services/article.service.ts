@@ -22,6 +22,11 @@ import { Tag } from '../entities/tag.entity'
 import { User } from '../entities/user.entity'
 import { ArticleApprovalStatus } from '../enum/article-approval-status.enum'
 import { BaseService, PaginatedResult } from './base.service'
+import { EventEmitter2 } from '@nestjs/event-emitter'
+import {
+  ARTICLE_SUBMITTED_EVENT,
+  ArticleSubmittedEvent,
+} from '../events/article.events'
 
 @Injectable()
 export class ArticleService extends BaseService<Article> {
@@ -36,6 +41,7 @@ export class ArticleService extends BaseService<Article> {
     @InjectRepository(Tag)
     private readonly tagRepository: Repository<Tag>,
     private readonly dataSource: DataSource,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     super(repository)
   }
@@ -98,61 +104,41 @@ export class ArticleService extends BaseService<Article> {
     updateDto: ArticleUpdateDto,
     userId: number,
   ): Promise<Article> {
-    const article = await this.findOneWithCategory(id)
-    if (!article) throw new NotFoundException('Article not found')
-    this.assertAuthor(article, userId)
-    if (
-      article.approvalStatus === ArticleApprovalStatus.PENDING ||
-      article.approvalStatus === ArticleApprovalStatus.WITHDRAWN
-    ) {
-      throw new ConflictException('审批中或已撤回的文章不能编辑')
-    }
-
     const { categoryId, tagIds, ...values } = updateDto
-    Object.assign(article, values)
-    if (categoryId !== undefined) {
-      article.category = await this.resolveCategory(categoryId)
-    }
-    if (tagIds !== undefined) {
-      article.tags = await this.resolveTags(tagIds)
-    }
-    if (
-      article.approvalStatus === ArticleApprovalStatus.APPROVED ||
-      article.approvalStatus === ArticleApprovalStatus.REJECTED
-    ) {
-      article.approvalStatus = ArticleApprovalStatus.PENDING
-      article.submittedAt = new Date()
-      article.reviewedAt = null
-      article.reviewer = null
-      article.rejectionReason = null
-    }
-    await this.repository.save(article)
+    const [category, tags] = await Promise.all([
+      categoryId === undefined ? undefined : this.resolveCategory(categoryId),
+      tagIds === undefined ? undefined : this.resolveTags(tagIds),
+    ])
+    await this.withLockedArticle(id, (article) => {
+      this.assertAuthor(article, userId)
+      this.assertActive(article)
+      this.assertNotPending(article)
+      Object.assign(article, values)
+      if (category) article.category = category
+      if (tags) article.tags = tags
+    })
     return (await this.findOneWithCategory(id)) as Article
   }
 
   async submit(id: number, userId: number): Promise<Article> {
     await this.withLockedArticle(id, (article) => {
       this.assertAuthor(article, userId)
-      if (
-        ![
-          ArticleApprovalStatus.DRAFT,
-          ArticleApprovalStatus.APPROVED,
-          ArticleApprovalStatus.REJECTED,
-        ].includes(article.approvalStatus)
-      ) {
-        throw new ConflictException('当前状态不能提交审批')
-      }
+      this.assertActive(article)
+      this.assertNotPending(article)
       article.approvalStatus = ArticleApprovalStatus.PENDING
       article.rejectionReason = null
       article.submittedAt = new Date()
       article.reviewedAt = null
       article.reviewer = null
     })
+    const event: ArticleSubmittedEvent = { articleId: id }
+    await this.eventEmitter.emitAsync(ARTICLE_SUBMITTED_EVENT, event)
     return (await this.findOneWithCategory(id)) as Article
   }
 
   async approve(id: number, reviewer: User): Promise<Article> {
     const title = await this.withLockedArticle(id, (article) => {
+      this.assertActive(article)
       this.assertPending(article)
       article.approvalStatus = ArticleApprovalStatus.APPROVED
       article.rejectionReason = null
@@ -167,6 +153,7 @@ export class ArticleService extends BaseService<Article> {
 
   async reject(id: number, reason: string, reviewer: User): Promise<Article> {
     await this.withLockedArticle(id, (article) => {
+      this.assertActive(article)
       this.assertPending(article)
       article.approvalStatus = ArticleApprovalStatus.REJECTED
       article.rejectionReason = reason.trim()
@@ -179,6 +166,7 @@ export class ArticleService extends BaseService<Article> {
   async withdraw(id: number, userId: number): Promise<Article> {
     const title = await this.withLockedArticle(id, (article) => {
       this.assertAuthor(article, userId)
+      this.assertActive(article)
       this.assertPending(article)
       article.approvalStatus = ArticleApprovalStatus.WITHDRAWN
       article.rejectionReason = null
@@ -190,14 +178,43 @@ export class ArticleService extends BaseService<Article> {
 
   async setStatus(id: number, status: number): Promise<Article> {
     await this.withLockedArticle(id, (article) => {
+      if (status === article.status) this.throwStateConflict()
+      if (status === 0) {
+        this.assertActive(article)
+        this.assertNotPending(article)
+      } else if (article.status !== 0) {
+        this.throwStateConflict()
+      }
       article.status = status
     })
     return (await this.findOneWithCategory(id)) as Article
   }
 
+  async deleteByAuthor(id: number, userId: number): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      const repository = manager.getRepository(Article)
+      const article = await repository.findOne({
+        where: { id },
+        relations: { author: true },
+        lock: { mode: 'pessimistic_write' },
+      })
+      if (!article) throw new NotFoundException('文章不存在')
+      this.assertAuthor(article, userId)
+      this.assertActive(article)
+      if (
+        ![ArticleApprovalStatus.DRAFT, ArticleApprovalStatus.REJECTED].includes(
+          article.approvalStatus,
+        )
+      ) {
+        this.throwStateConflict()
+      }
+      await repository.remove(article)
+    })
+  }
+
   private async resolveCategory(id: number): Promise<Category> {
     const category = await this.categoryRepository.findOne({ where: { id } })
-    if (!category) throw new NotFoundException('Category not found')
+    if (!category) throw new NotFoundException('分类不存在')
     return category
   }
 
@@ -218,10 +235,24 @@ export class ArticleService extends BaseService<Article> {
     }
   }
 
+  private assertActive(article: Article): void {
+    if (article.status !== 1) this.throwStateConflict()
+  }
+
+  private assertNotPending(article: Article): void {
+    if (article.approvalStatus === ArticleApprovalStatus.PENDING) {
+      this.throwStateConflict()
+    }
+  }
+
   private assertPending(article: Article): void {
     if (article.approvalStatus !== ArticleApprovalStatus.PENDING) {
-      throw new ConflictException('只有审批中的文章可以执行此操作')
+      this.throwStateConflict()
     }
+  }
+
+  private throwStateConflict(): never {
+    throw new ConflictException('当前文章状态不允许执行此操作')
   }
 
   private async withLockedArticle<T>(
@@ -235,7 +266,7 @@ export class ArticleService extends BaseService<Article> {
         relations: { author: true, reviewer: true },
         lock: { mode: 'pessimistic_write' },
       })
-      if (!article) throw new NotFoundException('Article not found')
+      if (!article) throw new NotFoundException('文章不存在')
       const result = await action(article)
       await repository.save(article)
       return result
