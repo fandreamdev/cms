@@ -110,8 +110,10 @@ GET /api/articles?approvalStatus=pending
 编辑规则：
 
 - `draft`：保存后仍为草稿。
-- `approved`、`rejected`：保存后直接进入 `pending`。
-- `pending`、`withdrawn`：禁止编辑，返回 HTTP 409。
+- `approved`、`rejected`：保存后审批状态不变。
+- `pending`：禁止编辑，返回 HTTP 409。
+- `withdrawn`：允许编辑，保存后仍为已撤回，可再次提交审批。
+- 任意审批状态下，`status = 0` 的已下架文章都禁止编辑和提交。
 - 只有作者可以编辑文章。
 
 ## 6. 提交审批
@@ -120,7 +122,8 @@ GET /api/articles?approvalStatus=pending
 POST /api/articles/:id/submit
 ```
 
-只有作者可以提交。允许从 `draft`、`approved` 或 `rejected` 进入 `pending`。
+只有作者可以提交。允许从 `draft`、`approved`、`rejected` 或 `withdrawn` 进入
+`pending`。已下架或审批中的文章不能提交。
 
 ## 7. 审核通过
 
@@ -155,7 +158,7 @@ Content-Type: application/json
 POST /api/articles/:id/withdraw
 ```
 
-只有作者可以撤回审批中的文章。当前阶段尚未创建发布表，接口会：
+只有作者可以撤回已上架且审批中的文章。当前阶段尚未创建发布表，接口会：
 
 1. 将审批状态改为 `withdrawn`。
 2. 输出日志 `文章[标题]已撤回`。
@@ -173,4 +176,14 @@ Content-Type: application/json
 }
 ```
 
-要求 `article:status` 权限。`0` 表示失效，`1` 表示有效，该操作不改变审批状态。
+要求 `article:status` 权限。下架只允许已上架且非审批中的文章；上架只允许已下架文章。
+该操作不改变审批状态。
+
+## 11. 删除
+
+```http
+DELETE /api/articles/:id
+```
+
+只有作者本人可以删除已上架且处于 `draft` 或 `rejected` 状态的文章。其他状态返回
+HTTP 409。

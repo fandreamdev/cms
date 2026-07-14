@@ -251,7 +251,7 @@ const canChangeStatus = hasPermission(currentUser, 'article:status')
 | `pending`   | 否         | 否         | 是         | 是                |
 | `approved`  | 是         | 是         | 否         | 否                |
 | `rejected`  | 是         | 是         | 否         | 否                |
-| `withdrawn` | 否         | 否         | 否         | 否                |
+| `withdrawn` | 是         | 是         | 否         | 否                |
 
 补充规则：
 
@@ -259,6 +259,7 @@ const canChangeStatus = hasPermission(currentUser, 'article:status')
 - 上下架按钮要求 `article:status` 权限。
 - 超级管理员拥有全部权限。
 - 后端始终进行最终权限校验，前端隐藏按钮只用于交互优化。
+- `status = 0` 时，无论审批状态为何，编辑和提交按钮都必须隐藏。
 
 ## 8. 创建文章
 
@@ -294,11 +295,12 @@ PUT /api/articles/:id
 保存行为：
 
 - 编辑草稿：保存后仍为 `draft`。
-- 编辑审核通过文章：保存后直接变为 `pending`。
-- 编辑审核不通过文章：保存后直接变为 `pending`。
-- `pending`、`withdrawn` 状态不允许进入编辑页。
+- 编辑审核通过文章：保存后仍为 `approved`。
+- 编辑审核不通过文章：保存后仍为 `rejected`。
+- 编辑已撤回文章：保存后保持 `withdrawn`，可以再次提交。
+- `pending` 或 `status = 0` 状态不允许进入编辑页。
 
-对于 `approved` 和 `rejected`，提交按钮建议显示“提交审核”，不要显示“保存草稿”。
+编辑和提交是两个独立操作。保存编辑不会自动发起审批，用户需要点击“提交审核”。
 
 ## 10. 提交审批
 
@@ -358,7 +360,8 @@ Content-Type: application/json
 - 去除首尾空格后不能为空。
 - 最大 500 字符。
 
-成功后状态变为 `rejected`，作者可以重新编辑；编辑保存后直接进入下一轮审批。
+成功后状态变为 `rejected`，作者可以重新编辑；保存后仍为拒绝状态，点击提交后才进入
+下一轮审批。
 
 ## 13. 撤回审批
 
@@ -368,12 +371,12 @@ POST /api/articles/:id/withdraw
 
 仅作者可以撤回 `pending` 文章。
 
-成功后状态变为 `withdrawn`。根据当前业务规则，已撤回文章不能继续编辑或再次提交。
+成功后状态变为 `withdrawn`。文章有效时可以继续编辑并再次提交审批。
 
 建议确认文案：
 
 ```text
-撤回后文章将变为已撤回状态，不能继续编辑或重新提交，是否继续？
+撤回后文章将变为已撤回状态，可以继续编辑并重新提交，是否继续？
 ```
 
 ## 14. 上下架
@@ -393,6 +396,19 @@ Content-Type: application/json
 - `1`：有效。
 - 需要 `article:status` 权限。
 - 不影响 `approvalStatus`。
+- 审批中禁止下架。
+- 已下架文章只显示查看和上架操作。
+
+## 14.1 删除规则
+
+删除按钮仅在以下条件全部满足时显示：
+
+```ts
+const canDelete =
+  isAuthor &&
+  article.status === 1 &&
+  ['draft', 'rejected'].includes(article.approvalStatus)
+```
 
 ## 15. 错误处理
 
@@ -427,5 +443,6 @@ Content-Type: application/json
 - [ ] 审核员可以通过或拒绝。
 - [ ] 拒绝理由可以显示和重新编辑。
 - [ ] 作者可以撤回审批中的文章。
-- [ ] 已撤回文章不能继续编辑。
+- [ ] 已撤回且有效的文章可以继续编辑和再次提交。
+- [ ] 已下架文章不能编辑或提交。
 - [ ] 上下架不改变审批状态。
