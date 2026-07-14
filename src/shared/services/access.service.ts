@@ -57,7 +57,7 @@ export class AccessService extends BaseService<Access> {
       relations: { parent: true },
     })
     if (!access) {
-      throw new NotFoundException('Access not found')
+      throw new NotFoundException('资源不存在')
     }
 
     if (updateDto.parentId !== undefined) {

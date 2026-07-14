@@ -20,12 +20,12 @@ export class AccessParentResolver {
   ): Promise<Access | null> {
     if (parentId === undefined || parentId === null) return null
     if (parentId === currentId) {
-      throw new BadRequestException('Parent access cannot be itself')
+      throw new BadRequestException('父资源不能是自身')
     }
 
     const parent = await this.repository.findOne({ where: { id: parentId } })
     if (!parent) {
-      throw new NotFoundException('Parent access not found')
+      throw new NotFoundException('父资源不存在')
     }
 
     if (currentId) {
@@ -44,7 +44,7 @@ export class AccessParentResolver {
 
     const descendants = await this.repository.findDescendants(current)
     if (descendants.some((item) => item.id === parentId)) {
-      throw new BadRequestException('Parent access cannot be a descendant')
+      throw new BadRequestException('父资源不能是当前资源的子资源')
     }
   }
 }

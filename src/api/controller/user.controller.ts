@@ -81,11 +81,11 @@ export class UserController {
 
   private async ensureExists(id: number): Promise<User> {
     const user = await this.userService.findOne({ where: { id } })
-    return ensureFound(user, 'User not found')
+    return ensureFound(user, '用户不存在')
   }
 
   private async ensureExistsWithRoles(id: number): Promise<User> {
     const user = await this.userService.findOneWithRoles(id)
-    return ensureFound(user, 'User not found')
+    return ensureFound(user, '用户不存在')
   }
 }

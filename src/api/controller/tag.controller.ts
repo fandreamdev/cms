@@ -41,7 +41,7 @@ export class TagController {
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<Tag> {
     const tag = await this.tagService.findOne({ where: { id } })
     if (!tag) {
-      throw new NotFoundException('Tag not found')
+      throw new NotFoundException('标签不存在')
     }
     return tag
   }

@@ -60,11 +60,11 @@ export class RoleController {
 
   private async ensureExists(id: number): Promise<Role> {
     const role = await this.roleService.findOne({ where: { id } })
-    return ensureFound(role, 'Role not found')
+    return ensureFound(role, '角色不存在')
   }
 
   private async ensureExistsWithAccesses(id: number): Promise<Role> {
     const role = await this.roleService.findOneWithAccesses(id)
-    return ensureFound(role, 'Role not found')
+    return ensureFound(role, '角色不存在')
   }
 }

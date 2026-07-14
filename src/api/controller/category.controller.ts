@@ -49,7 +49,7 @@ export class CategoryController {
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<Category> {
     const category = await this.categoryService.findOne({ where: { id } })
     if (!category) {
-      throw new NotFoundException('Category not found')
+      throw new NotFoundException('分类不存在')
     }
     return category
   }

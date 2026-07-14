@@ -97,7 +97,7 @@ export class UserService extends BaseService<User> {
     await this.dataSource.transaction(async (manager) => {
       const userRepository = manager.getRepository(User)
       const user = await userRepository.findOne({ where: { id } })
-      if (!user) throw new NotFoundException('User not found')
+      if (!user) throw new NotFoundException('用户不存在')
 
       const { roleIds, ...userFields } = payload
       let roles: Role[] | undefined

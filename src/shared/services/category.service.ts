@@ -38,7 +38,7 @@ export class CategoryService extends BaseService<Category> {
       where: { id },
       relations: { parent: true },
     })
-    if (!entity) throw new NotFoundException('Category not found')
+    if (!entity) throw new NotFoundException('分类不存在')
     const { parentId, ...values } = updateDto
     if (parentId !== undefined)
       entity.parent = await this.parentResolver.resolve(parentId, id)

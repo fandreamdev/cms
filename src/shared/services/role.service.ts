@@ -76,7 +76,7 @@ export class RoleService extends BaseService<Role> {
     await this.dataSource.transaction(async (manager) => {
       const roleRepository = manager.getRepository(Role)
       const role = await roleRepository.findOne({ where: { id } })
-      if (!role) throw new NotFoundException('Role not found')
+      if (!role) throw new NotFoundException('角色不存在')
 
       const { accessIds, ...roleFields } = payload
       let accesses: Access[] | undefined

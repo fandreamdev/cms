@@ -20,11 +20,11 @@ export class CategoryParentResolver {
   ): Promise<Category | null> {
     if (parentId === undefined || parentId === null) return null
     if (parentId === currentId)
-      throw new BadRequestException('Parent category cannot be itself')
+      throw new BadRequestException('父分类不能是自身')
     const parent = await this.repository.findOne({
       where: { id: parentId },
     })
-    if (!parent) throw new NotFoundException('Parent category not found')
+    if (!parent) throw new NotFoundException('父分类不存在')
     if (currentId) {
       const current = await this.repository.findOne({
         where: { id: currentId },
@@ -32,9 +32,7 @@ export class CategoryParentResolver {
       if (current) {
         const descendants = await this.repository.findDescendants(current)
         if (descendants.some((item) => item.id === parentId)) {
-          throw new BadRequestException(
-            'Parent category cannot be a descendant',
-          )
+          throw new BadRequestException('父分类不能是当前分类的子分类')
         }
       }
     }

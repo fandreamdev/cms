@@ -69,6 +69,6 @@ export class AccessController {
 
   private async ensureExists(id: number): Promise<Access> {
     const access = await this.accessService.findOneById(id)
-    return ensureFound(access, 'Access not found')
+    return ensureFound(access, '资源不存在')
   }
 }
