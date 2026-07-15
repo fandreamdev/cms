@@ -11,12 +11,20 @@ import { ArticleService } from '../../shared/services/article.service'
 import { CategoryParentResolver } from '../../shared/services/category/category-parent.resolver'
 import { CategoryService } from '../../shared/services/category.service'
 import { TagService } from '../../shared/services/tag.service'
+import { ArticleExportController } from '../../api/controller/article-export.controller'
+import { ArticleExportService } from '../../shared/services/article-export.service'
 
 @Module({
   imports: [TypeOrmModule.forFeature([Article, Category, Tag, User])],
-  controllers: [ArticleController, CategoryController, TagController],
+  controllers: [
+    ArticleExportController,
+    ArticleController,
+    CategoryController,
+    TagController,
+  ],
   providers: [
     ArticleService,
+    ArticleExportService,
     CategoryService,
     CategoryParentResolver,
     TagService,

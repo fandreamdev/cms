@@ -80,6 +80,13 @@ export class ArticleService extends BaseService<Article> {
     })
   }
 
+  async findAllForExport(): Promise<Article[]> {
+    return this.repository.find({
+      relations: { category: true, tags: true, author: true, reviewer: true },
+      order: { sort: 'ASC', id: 'ASC' },
+    })
+  }
+
   async createWithCategory(
     createDto: ArticleCreateDto,
     author: User,
