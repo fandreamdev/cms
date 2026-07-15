@@ -410,6 +410,28 @@ const canDelete =
   ['draft', 'rejected'].includes(article.approvalStatus)
 ```
 
+## 14.2 导出 Word/PDF/PPT/Excel
+
+文章详情页可在用户拥有 `article:view` 权限时显示“导出 Word”和“导出 PDF”按钮：
+
+```http
+GET /api/articles/:id/export?format=word
+GET /api/articles/:id/export?format=pdf
+```
+
+前端应按 Blob 下载响应，并优先从 `Content-Disposition` 的 `filename*` 读取 UTF-8
+文件名。该接口返回文件流，不包含统一 JSON 响应外壳。
+
+文章列表页在用户拥有 `article:list` 权限时显示“导出全部 PPT”和“导出全部 Excel”：
+
+```http
+GET /api/articles/export?format=ppt
+GET /api/articles/export?format=excel
+```
+
+PPT 每页对应一篇文章，Excel 每行对应一篇文章。两个接口都会导出全部文章，不应携带
+当前分页参数。
+
 ## 15. 错误处理
 
 | HTTP 状态 | 场景                           | 前端行为                 |
@@ -419,6 +441,7 @@ const canDelete =
 | 403       | 不是作者或缺少权限             | 提示没有权限             |
 | 404       | 文章、分类或标签不存在         | 提示数据不存在并返回列表 |
 | 409       | 当前状态不允许操作             | 提示状态已变化并刷新数据 |
+| 503       | PDF 导出字体未配置             | 提示管理员配置中文字体   |
 
 ## 16. 联调账号
 
@@ -446,3 +469,6 @@ const canDelete =
 - [ ] 已撤回且有效的文章可以继续编辑和再次提交。
 - [ ] 已下架文章不能编辑或提交。
 - [ ] 上下架不改变审批状态。
+- [ ] Word 和 PDF 可以导出指定文章并正确显示中文。
+- [ ] PPT 可以导出全部文章，且每页对应一篇文章。
+- [ ] Excel 可以导出全部文章，且每行对应一篇文章。

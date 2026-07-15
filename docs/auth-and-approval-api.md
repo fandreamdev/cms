@@ -187,3 +187,47 @@ DELETE /api/articles/:id
 
 只有作者本人可以删除已上架且处于 `draft` 或 `rejected` 状态的文章。其他状态返回
 HTTP 409。
+
+## 12. 导出 Word/PDF/PPT/Excel
+
+### 12.1 导出单篇文章
+
+```http
+GET /api/articles/:id/export?format=word
+GET /api/articles/:id/export?format=pdf
+```
+
+要求 `article:view` 权限。接口直接返回二进制附件，不使用统一的
+`{ code, message, data }` 响应结构：
+
+- `format=word` 返回 `.docx`，Content-Type 为
+  `application/vnd.openxmlformats-officedocument.wordprocessingml.document`。
+- `format=pdf` 返回 `.pdf`，Content-Type 为 `application/pdf`。
+- 文件名优先使用文章标题，并同时提供 ASCII 回退文件名。
+- 导出内容包含标题、摘要、作者、分类、标签、发布日期和正文。
+- 正文支持标题、段落、列表、引用、代码块和图片说明。服务端不会主动下载正文中的
+  外部图片，避免任意 URL 抓取造成 SSRF。
+
+PDF 导出会自动探测常见操作系统中的中文字体。部署环境没有可用字体时，应配置：
+
+```dotenv
+ARTICLE_EXPORT_PDF_FONT_PATH=/path/to/chinese-font.ttf
+# TTC 字体集合还需要指定字体名称
+ARTICLE_EXPORT_PDF_FONT_FAMILY=Noto Sans CJK SC
+```
+
+### 12.2 导出全部文章
+
+```http
+GET /api/articles/export?format=ppt
+GET /api/articles/export?format=excel
+```
+
+要求 `article:list` 权限，导出范围为全部文章，不受列表分页参数影响：
+
+- `format=ppt` 返回 `.pptx`，每一页对应一篇文章。单页包含文章标题、摘要、正文摘录、
+  分类、标签、作者、发布时间及有效状态。
+- `format=excel` 返回 `.xlsx`，每一行对应一篇文章。工作表提供筛选、冻结表头、日期
+  格式和自动换行，包含完整的正文纯文本及文章元数据。
+- 当文章正文过长时，PPT 为保证“一页一篇文章”会截取适合单页展示的内容；Excel
+  保留完整正文。
