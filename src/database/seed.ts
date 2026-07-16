@@ -260,6 +260,17 @@ const accessTree: AccessSeedNode[] = [
           'delete',
         ]),
       },
+      {
+        type: AccessType.MENU,
+        url: '/admin/system/settings',
+        description: '网站设置',
+        children: createFeatureNodes('setting', [
+          'list',
+          'view',
+          'edit',
+          'delete',
+        ]),
+      },
     ],
   },
   {

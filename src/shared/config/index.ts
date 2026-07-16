@@ -25,6 +25,12 @@ import {
   ArticleExportConfigType,
   articleExportSchema,
 } from './article-export.config'
+import {
+  MONGO_KEY,
+  mongoConfig,
+  MongoConfigType,
+  mongoSchema,
+} from './mongo.config'
 
 export * from './database.config'
 export * from './i18n.config'
@@ -32,6 +38,7 @@ export * from './upload.config'
 export * from './auth.config'
 export * from './email.config'
 export * from './article-export.config'
+export * from './mongo.config'
 
 export type AppConfigType = {
   [DATABASE_KEY]: DatabaseConfigType
@@ -40,6 +47,7 @@ export type AppConfigType = {
   [AUTH_KEY]: AuthConfigType
   [EMAIL_KEY]: EmailConfigType
   [ARTICLE_EXPORT_KEY]: ArticleExportConfigType
+  [MONGO_KEY]: MongoConfigType
 }
 
 export const appConfigSchema = Joi.object({
@@ -48,6 +56,7 @@ export const appConfigSchema = Joi.object({
   ...authSchema,
   ...emailSchema,
   ...articleExportSchema,
+  ...mongoSchema,
 })
 
 export default [
@@ -57,4 +66,5 @@ export default [
   authConfig,
   emailConfig,
   articleExportConfig,
+  mongoConfig,
 ]

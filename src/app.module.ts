@@ -10,6 +10,7 @@ import { SystemModule } from './modules/system/system.module'
 import { UploadModule } from './modules/upload/upload.module'
 import { EventEmitterModule } from '@nestjs/event-emitter'
 import { NotificationModule } from './modules/notification/notification.module'
+import { SettingsModule } from './modules/settings/settings.module'
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { NotificationModule } from './modules/notification/notification.module'
       global: true,
     }),
     NotificationModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
