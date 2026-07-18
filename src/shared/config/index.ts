@@ -31,6 +31,18 @@ import {
   MongoConfigType,
   mongoSchema,
 } from './mongo.config'
+import {
+  WEATHER_KEY,
+  weatherConfig,
+  WeatherConfigType,
+  weatherSchema,
+} from './weather.config'
+import {
+  SYSTEM_MONITOR_KEY,
+  systemMonitorConfig,
+  SystemMonitorConfigType,
+  systemMonitorSchema,
+} from './system-monitor.config'
 
 export * from './database.config'
 export * from './i18n.config'
@@ -39,6 +51,8 @@ export * from './auth.config'
 export * from './email.config'
 export * from './article-export.config'
 export * from './mongo.config'
+export * from './weather.config'
+export * from './system-monitor.config'
 
 export type AppConfigType = {
   [DATABASE_KEY]: DatabaseConfigType
@@ -48,6 +62,8 @@ export type AppConfigType = {
   [EMAIL_KEY]: EmailConfigType
   [ARTICLE_EXPORT_KEY]: ArticleExportConfigType
   [MONGO_KEY]: MongoConfigType
+  [WEATHER_KEY]: WeatherConfigType
+  [SYSTEM_MONITOR_KEY]: SystemMonitorConfigType
 }
 
 export const appConfigSchema = Joi.object({
@@ -57,6 +73,8 @@ export const appConfigSchema = Joi.object({
   ...emailSchema,
   ...articleExportSchema,
   ...mongoSchema,
+  ...weatherSchema,
+  ...systemMonitorSchema,
 })
 
 export default [
@@ -67,4 +85,6 @@ export default [
   emailConfig,
   articleExportConfig,
   mongoConfig,
+  weatherConfig,
+  systemMonitorConfig,
 ]

@@ -42,6 +42,14 @@ export class ArticleController {
     return this.articleService.findAllWithCategory(queryDto)
   }
 
+  @Get('review')
+  @RequirePermissions('article:review:list')
+  async reviewList(
+    @Query() queryDto: ArticleQueryDto,
+  ): Promise<PaginatedData<Article>> {
+    return this.articleService.findAllWithCategory(queryDto)
+  }
+
   @Get(':id')
   @RequirePermissions('article:view')
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<Article> {

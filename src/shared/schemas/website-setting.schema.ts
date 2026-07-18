@@ -30,3 +30,5 @@ export class WebsiteSetting {
 }
 
 export const WebsiteSettingSchema = SchemaFactory.createForClass(WebsiteSetting)
+WebsiteSettingSchema.index({ updatedAt: -1, key: 1 })
+WebsiteSettingSchema.index({ createdAt: 1 })

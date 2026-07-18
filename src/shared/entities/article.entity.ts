@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinTable,
   JoinColumn,
   ManyToOne,
@@ -16,6 +17,10 @@ import { User } from './user.entity'
 import { ArticleApprovalStatus } from '../enum/article-approval-status.enum'
 
 @Entity('articles')
+@Index('IDX_articles_approval_status', ['approvalStatus'])
+@Index('IDX_articles_status', ['status'])
+@Index('IDX_articles_updated_at_id', ['updatedAt', 'id'])
+@Index('IDX_articles_created_at', ['createdAt'])
 export class Article {
   @PrimaryGeneratedColumn({ comment: '唯一标识' })
   id!: number

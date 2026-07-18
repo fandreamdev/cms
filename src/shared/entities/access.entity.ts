@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   ManyToMany,
   PrimaryGeneratedColumn,
   RelationId,
@@ -16,6 +17,8 @@ import { Role } from './role.entity'
 
 @Entity('accesses')
 @Tree('materialized-path')
+@Index('IDX_accesses_updated_at_id', ['updatedAt', 'id'])
+@Index('IDX_accesses_created_at', ['createdAt'])
 export class Access {
   @PrimaryGeneratedColumn({ comment: '唯一标识' })
   id!: number

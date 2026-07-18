@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   OneToMany,
   PrimaryGeneratedColumn,
   RelationId,
@@ -14,6 +15,8 @@ import { Article } from './article.entity'
 
 @Entity('categories')
 @Tree('materialized-path')
+@Index('IDX_categories_updated_at_id', ['updatedAt', 'id'])
+@Index('IDX_categories_created_at', ['createdAt'])
 export class Category {
   @PrimaryGeneratedColumn({ comment: '唯一标识' })
   id!: number

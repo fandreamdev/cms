@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinTable,
   ManyToMany,
   PrimaryGeneratedColumn,
@@ -11,6 +12,8 @@ import { User } from './user.entity'
 import { Access } from './access.entity'
 
 @Entity('roles')
+@Index('IDX_roles_updated_at_id', ['updatedAt', 'id'])
+@Index('IDX_roles_created_at', ['createdAt'])
 export class Role {
   @PrimaryGeneratedColumn({ comment: '唯一标识' })
   id!: number

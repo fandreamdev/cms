@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   ManyToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -9,6 +10,8 @@ import {
 import { Article } from './article.entity'
 
 @Entity('tags')
+@Index('IDX_tags_updated_at_id', ['updatedAt', 'id'])
+@Index('IDX_tags_created_at', ['createdAt'])
 export class Tag {
   @PrimaryGeneratedColumn({ comment: '唯一标识' })
   id!: number

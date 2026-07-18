@@ -52,15 +52,23 @@ export class ArticleService extends BaseService<Article> {
     const page = query.page && query.page > 0 ? query.page : 1
     const pageSize = query.pageSize && query.pageSize > 0 ? query.pageSize : 10
 
-    const { categoryId, ...filters } = query
+    const { categoryId, orderBy, order, createdFrom, createdTo, ...filters } =
+      query
     const where = this.buildWhere(filters)
+    this.applyCreatedAtRange(where, { createdFrom, createdTo })
     if (typeof categoryId === 'number') {
       where.category = { id: categoryId } as never
     }
     const [list, total] = await this.repository.findAndCount({
       where,
       relations: { category: true, tags: true, author: true, reviewer: true },
-      order: this.defaultOrder,
+      order:
+        orderBy === 'updatedAt'
+          ? {
+              updatedAt: order === 'asc' ? 'ASC' : 'DESC',
+              id: order === 'asc' ? 'ASC' : 'DESC',
+            }
+          : this.defaultOrder,
       skip: (page - 1) * pageSize,
       take: pageSize,
     })
