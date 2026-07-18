@@ -1,6 +1,8 @@
 import { INestApplicationContext } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { getRepositoryToken } from '@nestjs/typeorm'
+import { getModelToken } from '@nestjs/mongoose'
+import { Model } from 'mongoose'
 import { DataSource, Repository, TreeRepository } from 'typeorm'
 import { AppModule } from '../app.module'
 import { Access } from '../shared/entities/access.entity'
@@ -11,6 +13,7 @@ import { Tag } from '../shared/entities/tag.entity'
 import { User } from '../shared/entities/user.entity'
 import { AccessType } from '../shared/enum/access.enum'
 import { hashPassword } from '../shared/utils/pwd'
+import { WebsiteSetting } from '../shared/schemas/website-setting.schema'
 
 interface AccessSeedNode {
   type: AccessType
@@ -37,6 +40,40 @@ interface CategorySeedNode {
   sort: number
   children?: CategorySeedNode[]
 }
+
+interface WebsiteSettingSeed {
+  key: string
+  value: unknown
+  description: string
+  isPublic: boolean
+}
+
+const websiteSettings: WebsiteSettingSeed[] = [
+  {
+    key: 'site:name',
+    value: 'CMS',
+    description: '网站名称',
+    isPublic: true,
+  },
+  {
+    key: 'site:description',
+    value: '内容管理系统',
+    description: '网站描述',
+    isPublic: true,
+  },
+  {
+    key: 'site:contact-email',
+    value: 'contact@example.com',
+    description: '联系邮箱',
+    isPublic: true,
+  },
+  {
+    key: 'weather:location',
+    value: { name: '上海', latitude: 31.2304, longitude: 121.4737 },
+    description: '后台仪表盘天气位置',
+    isPublic: false,
+  },
+]
 
 const categoryTree: CategorySeedNode[] = [
   {
@@ -271,6 +308,18 @@ const accessTree: AccessSeedNode[] = [
           'delete',
         ]),
       },
+      {
+        type: AccessType.MENU,
+        url: '/admin/system/status',
+        description: '系统状态',
+        children: [
+          {
+            type: AccessType.FEATURE,
+            url: 'system:monitor',
+            description: '系统监控',
+          },
+        ],
+      },
     ],
   },
   {
@@ -328,7 +377,7 @@ const accessTree: AccessSeedNode[] = [
         type: AccessType.MENU,
         url: '/admin/reviews/articles',
         description: '文章审核',
-        children: createFeatureNodes('article', ['approve']),
+        children: createFeatureNodes('article', ['review:list', 'approve']),
       },
     ],
   },
@@ -367,6 +416,9 @@ async function seed(app: INestApplicationContext): Promise<void> {
   const categoryRepository = app.get<TreeRepository<Category>>(
     getRepositoryToken(Category),
   )
+  const settingModel = app.get<Model<WebsiteSetting>>(
+    getModelToken(WebsiteSetting.name),
+  )
 
   if (process.argv.includes('--reset')) {
     await resetTables(dataSource, ['roles', 'users'])
@@ -388,6 +440,13 @@ async function seed(app: INestApplicationContext): Promise<void> {
     savedUsers,
     savedAccesses,
   )
+  await assignSystemMonitor(
+    roleRepository,
+    userRepository,
+    savedRoles,
+    savedUsers,
+    savedAccesses,
+  )
   const savedTags = await saveTags(tagRepository)
   const savedCategories = await saveCategoryTree(
     categoryRepository,
@@ -399,6 +458,7 @@ async function seed(app: INestApplicationContext): Promise<void> {
     savedCategories,
     savedUsers,
   )
+  const savedSettings = await saveWebsiteSettings(settingModel)
 
   console.log(
     [
@@ -409,10 +469,34 @@ async function seed(app: INestApplicationContext): Promise<void> {
       `Tags: ${savedTags.length}`,
       `Categories: ${savedCategories.length}`,
       `Articles: ${savedArticles.length}`,
+      `Website settings: ${savedSettings}`,
       'Default password: Test@123456',
       process.argv.includes('--reset') ? 'Mode: reset' : 'Mode: upsert',
     ].join('\n'),
   )
+}
+
+async function saveWebsiteSettings(
+  settingModel: Model<WebsiteSetting>,
+): Promise<number> {
+  await Promise.all(
+    websiteSettings.map((setting) =>
+      settingModel
+        .findOneAndUpdate(
+          { key: setting.key },
+          {
+            $set: {
+              value: setting.value,
+              isPublic: setting.isPublic,
+              description: setting.description,
+            },
+          },
+          { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
+        )
+        .exec(),
+    ),
+  )
+  return websiteSettings.length
 }
 
 async function assignContentReviewer(
@@ -432,6 +516,7 @@ async function assignContentReviewer(
       '/admin/reviews/articles',
       'article:list',
       'article:view',
+      'article:review:list',
       'article:approve',
       'article:status',
     ].includes(access.url),
@@ -439,6 +524,39 @@ async function assignContentReviewer(
   await roleRepository.save(role)
 
   user.roles = [role]
+  await userRepository.save(user)
+}
+
+async function assignSystemMonitor(
+  roleRepository: Repository<Role>,
+  userRepository: Repository<User>,
+  savedRoles: Role[],
+  savedUsers: User[],
+  savedAccesses: Access[],
+): Promise<void> {
+  const savedRole = savedRoles.find((item) => item.name === '运维管理员')
+  const savedUser = savedUsers.find((item) => item.username === 'ops_manager')
+  const access = savedAccesses.find((item) => item.url === 'system:monitor')
+  if (!savedRole || !savedUser || !access) {
+    throw new Error('System monitor seed data not found')
+  }
+
+  const role = await roleRepository.findOne({
+    where: { id: savedRole.id },
+    relations: { accesses: true },
+  })
+  const user = await userRepository.findOne({
+    where: { id: savedUser.id },
+    relations: { roles: true },
+  })
+  if (!role || !user) throw new Error('System monitor seed data not found')
+
+  const accessIds = new Set(role.accesses.map((item) => item.id))
+  if (!accessIds.has(access.id)) role.accesses = [...role.accesses, access]
+  await roleRepository.save(role)
+
+  const roleIds = new Set(user.roles.map((item) => item.id))
+  if (!roleIds.has(role.id)) user.roles = [...user.roles, role]
   await userRepository.save(user)
 }
 

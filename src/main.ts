@@ -7,6 +7,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston'
 import { I18nValidationExceptionFilter, I18nValidationPipe } from 'nestjs-i18n'
 import { resolve } from 'path'
 import { uploadConfig, UploadConfigType } from './shared/config'
+import { DashboardSystemSocketService } from './shared/services/dashboard-system-socket.service'
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -36,6 +37,8 @@ async function bootstrap() {
       prefix: '/uploads/',
     },
   )
+
+  app.get(DashboardSystemSocketService).attach(app.getHttpServer())
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('CMS')

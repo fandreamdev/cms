@@ -11,6 +11,7 @@ import { UploadModule } from './modules/upload/upload.module'
 import { EventEmitterModule } from '@nestjs/event-emitter'
 import { NotificationModule } from './modules/notification/notification.module'
 import { SettingsModule } from './modules/settings/settings.module'
+import { DashboardModule } from './modules/dashboard/dashboard.module'
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { SettingsModule } from './modules/settings/settings.module'
     }),
     NotificationModule,
     SettingsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],
