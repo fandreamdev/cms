@@ -14,6 +14,7 @@ import { IS_PUBLIC_KEY } from './public.decorator'
 import { authConfig } from '../shared/config'
 import type { AuthConfigType } from '../shared/config'
 import { TokenPayload } from './token-payload'
+import { RefreshSessionService } from './refresh-session.service'
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -23,6 +24,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly userService: UserService,
     @Inject(authConfig.KEY)
     private readonly config: AuthConfigType,
+    private readonly refreshSessionService: RefreshSessionService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -34,7 +36,7 @@ export class JwtAuthGuard implements CanActivate {
 
     const request = context
       .switchToHttp()
-      .getRequest<Request & { user?: AuthUser }>()
+      .getRequest<Request & { user?: AuthUser; authSessionId?: string }>()
     const token = this.extractToken(request)
     if (!token) throw new UnauthorizedException('请先登录')
 
@@ -47,7 +49,9 @@ export class JwtAuthGuard implements CanActivate {
         !Number.isInteger(payload.sub) ||
         payload.sub <= 0 ||
         typeof payload.jti !== 'string' ||
-        !payload.jti
+        !payload.jti ||
+        typeof payload.sid !== 'string' ||
+        !payload.sid
       ) {
         throw new UnauthorizedException('令牌类型或负载无效')
       }
@@ -55,7 +59,13 @@ export class JwtAuthGuard implements CanActivate {
       if (!user || user.status !== 1) {
         throw new UnauthorizedException('用户不存在或已停用')
       }
+      if (
+        !(await this.refreshSessionService.assertActive(user.id, payload.sid))
+      ) {
+        throw new UnauthorizedException('登录会话已失效')
+      }
       request.user = user
+      request.authSessionId = payload.sid
       return true
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error

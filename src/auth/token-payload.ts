@@ -4,4 +4,5 @@ export interface TokenPayload {
   sub: number
   tokenType: TokenType
   jti: string
+  sid: string
 }

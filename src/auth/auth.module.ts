@@ -8,6 +8,11 @@ import { JwtAuthGuard } from './jwt-auth.guard'
 import { PermissionsGuard } from './permissions.guard'
 import { AuthService } from './auth.service'
 import { SystemModule } from '../modules/system/system.module'
+import { CaptchaService } from './captcha.service'
+import { CaptchaStoreService } from './captcha-store.service'
+import { RedisCommandService } from './redis-command.service'
+import { AuthRateLimitService } from './auth-rate-limit.service'
+import { RefreshSessionService } from './refresh-session.service'
 
 @Global()
 @Module({
@@ -24,6 +29,11 @@ import { SystemModule } from '../modules/system/system.module'
   controllers: [AuthController],
   providers: [
     AuthService,
+    CaptchaService,
+    CaptchaStoreService,
+    RedisCommandService,
+    AuthRateLimitService,
+    RefreshSessionService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
