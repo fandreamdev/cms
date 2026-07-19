@@ -50,7 +50,9 @@ export class ApiExceptionFilter extends I18nValidationExceptionFilter {
           ? body
           : this.extractMessage(body) || exception.message
       return res.status(status).json({
-        code: status,
+        code:
+          (typeof body === 'string' ? undefined : this.extractCode(body)) ??
+          status,
         message,
         data: null,
       } satisfies ApiResponse)
@@ -73,5 +75,12 @@ export class ApiExceptionFilter extends I18nValidationExceptionFilter {
     if (Array.isArray(message)) return message[0] as string
     if (typeof message === 'string') return message
     return undefined
+  }
+
+  private extractCode(body: object): number | string | undefined {
+    const code = (body as { code?: unknown }).code
+    return typeof code === 'number' || typeof code === 'string'
+      ? code
+      : undefined
   }
 }
